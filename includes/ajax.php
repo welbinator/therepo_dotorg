@@ -126,3 +126,31 @@ add_action('wp_ajax_get_submission_data', function () {
     wp_send_json_success($data);
 });
 
+// category select2 ajax
+add_action('wp_ajax_get_categories', __NAMESPACE__ . '\\get_categories');
+add_action('wp_ajax_nopriv_get_categories', __NAMESPACE__ . '\\get_categories');
+
+function get_categories() {
+    if (!isset($_GET['q'])) {
+        wp_send_json_error('Missing query parameter.');
+        return;
+    }
+
+    $search = sanitize_text_field($_GET['q']);
+    $taxonomy = 'plugin-category'; // Replace with your desired taxonomy
+    $categories = get_terms(array(
+        'taxonomy'   => $taxonomy,
+        'name__like' => $search,
+        'hide_empty' => false,
+    ));
+
+    $results = array();
+    foreach ($categories as $category) {
+        $results[] = array(
+            'id'   => $category->slug,
+            'text' => $category->name,
+        );
+    }
+
+    wp_send_json($results);
+}

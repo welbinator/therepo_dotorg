@@ -27,18 +27,24 @@ add_action('wp_enqueue_scripts', function () {
     // Enqueue CSS
     wp_enqueue_style(
         'the-repo-main-css', // Handle for the stylesheet
-        plugin_dir_url(__FILE__) . 'assets/css/main.css', // Path to the CSS file
-        [], // Dependencies (empty array if none)
-        '1.0.0' // Version (update this as needed for cache-busting)
+        plugin_dir_url(__FILE__) . 'build/index.css', // Path to the CSS file
+        [], // Dependencies
+        '1.0.0' // Version
     );
 
-    // Enqueue JS (if not already enqueued)
+    // Enqueue JS
     wp_enqueue_script(
-        'the-repo-main-js',
-        plugin_dir_url(__FILE__) . 'assets/js/main.js',
-        ['jquery'], // Dependencies (e.g., jQuery)
-        '1.0.0',
-        true // Load in the footer
+        'repo-categories',
+        plugin_dir_url(__FILE__) . 'build/index.js', // Directly reference the correct directory
+        array('jquery'), 
+        '1.0.0', 
+        true
     );
+
+    // Localize the script
+    wp_localize_script('repo-categories', 'RepoCategories', array(
+        'ajax_url' => admin_url('admin-ajax.php'),
+    ));
 });
+
 
