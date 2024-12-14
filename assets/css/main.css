@@ -1,0 +1,6 @@
+#repo_submission_form div select,
+#repo_submission_form div input,
+#repo_submission_form div textarea {
+    width: 500px;
+    max-width: 100%;
+}
