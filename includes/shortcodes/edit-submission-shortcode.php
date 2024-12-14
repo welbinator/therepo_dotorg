@@ -129,3 +129,80 @@ function repo_edit_form_shortcode() {
 }
 
 add_shortcode('repo_edit_form', __NAMESPACE__ . '\\repo_edit_form_shortcode');
+
+// Form submission handler
+add_action('admin_post_repo_edit_submission', __NAMESPACE__ . '\\handle_repo_edit_submission');
+
+function handle_repo_edit_submission() {
+    if (!isset($_POST['repo_nonce']) || !wp_verify_nonce($_POST['repo_nonce'], 'repo_edit_submission')) {
+        wp_die('Error: Invalid form submission.');
+    }
+
+    if (!is_user_logged_in()) {
+        wp_die('Error: You must be logged in to edit a submission.');
+    }
+
+    $submission_id = absint($_POST['submission_id']);
+    $post = get_post($submission_id);
+
+    // Ensure the post exists and belongs to the current user
+    if (!$post || $post->post_author != get_current_user_id()) {
+        wp_die('Error: Unauthorized access to this submission.');
+    }
+
+    $name = sanitize_text_field($_POST['name']);
+    $github_username = sanitize_text_field($_POST['github_username']);
+    $github_repo = sanitize_text_field($_POST['github_repo']);
+    $description = sanitize_textarea_field($_POST['description']);
+    $categories = sanitize_text_field($_POST['categories']);
+
+    if (empty($name) || empty($github_username) || empty($github_repo) || empty($description)) {
+        wp_die('Error: All fields are required.');
+    }
+
+    // Update the post title and content
+    wp_update_post([
+        'ID' => $submission_id,
+        'post_title' => $name,
+        'post_content' => $description,
+    ]);
+
+    // Update GitHub meta fields
+    update_post_meta($submission_id, 'github_username', $github_username);
+    update_post_meta($submission_id, 'github_repo', $github_repo);
+
+    // Update categories
+    $post_type = $post->post_type;
+    $taxonomy = $post_type === 'plugin' ? 'plugin-category' : 'theme-category';
+    $category_list = array_map('trim', explode(',', $categories));
+    wp_set_object_terms($submission_id, $category_list, $taxonomy);
+
+    // Handle featured image upload
+    if (!empty($_FILES['featured_image']['name'])) {
+        $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
+
+        if ($upload && !isset($upload['error'])) {
+            $filetype = wp_check_filetype($upload['file']);
+            $attachment = array(
+                'post_mime_type' => $filetype['type'],
+                'post_title'     => sanitize_file_name($_FILES['featured_image']['name']),
+                'post_content'   => '',
+                'post_status'    => 'inherit',
+            );
+
+            $featured_image_id = wp_insert_attachment($attachment, $upload['file']);
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            $attach_data = wp_generate_attachment_metadata($featured_image_id, $upload['file']);
+            wp_update_attachment_metadata($featured_image_id, $attach_data);
+
+            // Set as the post's featured image
+            set_post_thumbnail($submission_id, $featured_image_id);
+        } else {
+            wp_die('Error uploading featured image: ' . $upload['error']);
+        }
+    }
+
+    // Redirect back to the edit form with a success message
+    wp_redirect(add_query_arg('updated', 'true', get_permalink($submission_id)));
+    exit;
+}

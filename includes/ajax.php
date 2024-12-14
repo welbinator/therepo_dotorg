@@ -107,7 +107,7 @@ add_action('wp_ajax_get_submission_data', function () {
     // Get submission details
     $featured_image_id = get_post_thumbnail_id($submission_id); // Get the featured image ID
     $featured_image_url = $featured_image_id ? wp_get_attachment_url($featured_image_id) : ''; // Get the image URL
-error_log($featured_image_url);
+
     $data = [
         'name' => $post->post_title,
         'github_username' => get_post_meta($submission_id, 'github_username', true),
