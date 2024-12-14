@@ -89,3 +89,35 @@ function filter_plugins() {
 }
 add_action('wp_ajax_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
 add_action('wp_ajax_nopriv_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
+
+//get submission data for edit submission form
+add_action('wp_ajax_get_submission_data', function () {
+    if (!is_user_logged_in() || empty($_GET['id'])) {
+        wp_send_json_error('Unauthorized or invalid request.', 401);
+    }
+
+    $submission_id = absint($_GET['id']);
+    $post = get_post($submission_id);
+
+    // Ensure the post exists and belongs to the logged-in user
+    if (!$post || $post->post_author != get_current_user_id()) {
+        wp_send_json_error('Unauthorized access to this submission.', 403);
+    }
+
+    // Get submission details
+    $featured_image_id = get_post_thumbnail_id($submission_id); // Get the featured image ID
+    $featured_image_url = $featured_image_id ? wp_get_attachment_url($featured_image_id) : ''; // Get the image URL
+
+    $data = [
+        'name' => $post->post_title,
+        'github_username' => get_post_meta($submission_id, 'github_username', true),
+        'github_repo' => get_post_meta($submission_id, 'github_repo', true),
+        'description' => $post->post_content,
+        'categories' => implode(', ', wp_get_post_terms($submission_id, get_post_type($submission_id) === 'plugin' ? 'plugin-category' : 'theme-category', ['fields' => 'names'])),
+        'featured_image' => $featured_image_url, // Add the image URL to the data
+    ];
+
+
+    wp_send_json_success($data);
+});
+

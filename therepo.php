@@ -19,6 +19,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/post-types.php';
 require_once plugin_dir_path(__FILE__) . 'includes/ajax.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/browse-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/form-shortcode.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/user-submissions-shortcode.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/edit-submission-shortcode.php';
 
 // Enqueue scripts and styles.
 add_action('wp_enqueue_scripts', function () {

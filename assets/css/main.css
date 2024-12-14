@@ -4,3 +4,7 @@
     width: 500px;
     max-width: 100%;
 }
+#featured-image-preview img {
+    width: 50px;
+    height: 50px;
+}

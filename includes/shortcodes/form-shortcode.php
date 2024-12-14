@@ -7,6 +7,10 @@ function handle_plugin_repo_submission() {
         wp_die('Error: Invalid form submission.');
     }
 
+    if (!is_user_logged_in()) {
+        wp_die('Error: You must be logged in to submit a plugin or theme.');
+    }
+
     $type = sanitize_text_field($_POST['type']);
     $name = sanitize_text_field($_POST['name']);
     $github_username = sanitize_text_field($_POST['github_username']);
@@ -25,25 +29,28 @@ function handle_plugin_repo_submission() {
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
-
+    
         if ($upload && !isset($upload['error'])) {
-            // Insert attachment
             $filetype = wp_check_filetype($upload['file']);
             $attachment = array(
                 'post_mime_type' => $filetype['type'],
                 'post_title'     => sanitize_file_name($_FILES['featured_image']['name']),
                 'post_content'   => '',
-                'post_status'    => 'inherit'
+                'post_status'    => 'inherit',
             );
-
+    
             $featured_image_id = wp_insert_attachment($attachment, $upload['file']);
             require_once(ABSPATH . 'wp-admin/includes/image.php');
             $attach_data = wp_generate_attachment_metadata($featured_image_id, $upload['file']);
             wp_update_attachment_metadata($featured_image_id, $attach_data);
+    
+            // Set as the post's featured image
+            set_post_thumbnail($post_id, $featured_image_id);
         } else {
             wp_die('Error uploading featured image: ' . $upload['error']);
         }
     }
+    
 
     // Determine post type and taxonomy
     $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
@@ -55,34 +62,43 @@ function handle_plugin_repo_submission() {
         'post_content' => $description,
         'post_excerpt' => wp_trim_words($description, 55),
         'post_type'    => $post_type,
-        'post_status'  => 'pending', // Set to pending for moderation
+        'post_status'  => 'pending',
+        'post_author'  => get_current_user_id(), // Link to logged-in user
     ));
 
     if ($post_id) {
-        // Add custom field for GitHub Latest Release URL
+        // Save meta fields
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
+        update_post_meta($post_id, 'github_username', $github_username); // Save GitHub username
+        update_post_meta($post_id, 'github_repo', $github_repo);         // Save GitHub repo
 
-        // Add categories to the appropriate taxonomy
+        // Set categories
         $category_list = array_map('trim', explode(',', $categories));
         wp_set_object_terms($post_id, $category_list, $taxonomy);
 
-        // Set the featured image for the post
+        // Set the featured image
         if ($featured_image_id) {
             set_post_thumbnail($post_id, $featured_image_id);
         }
 
-        wp_redirect(add_query_arg('submission', 'success', home_url())); // Redirect after success
+        // Redirect after success
+        wp_redirect(add_query_arg('submission', 'success', home_url()));
         exit;
     } else {
         wp_die('Error: Unable to create the submission.');
     }
 }
 
+
+
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission'); // For non-logged-in users
 
 // Form shortcode
 function plugin_repo_submission_form_shortcode() {
+    if (!is_user_logged_in()) {
+        return '<p>You must be logged in to submit a plugin or theme. <a href="' . wp_login_url(get_permalink()) . '">Log in</a> or <a href="' . wp_registration_url() . '">Register</a>.</p>';
+    }
     ob_start(); ?>
     <section class="py-16 bg-white">
         <div class="container mx-auto px-4">
