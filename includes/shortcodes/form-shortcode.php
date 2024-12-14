@@ -7,6 +7,10 @@ function handle_plugin_repo_submission() {
         wp_die('Error: Invalid form submission.');
     }
 
+    if (!is_user_logged_in()) {
+        wp_die('Error: You must be logged in to submit a plugin or theme.');
+    }
+
     $type = sanitize_text_field($_POST['type']);
     $name = sanitize_text_field($_POST['name']);
     $github_username = sanitize_text_field($_POST['github_username']);
@@ -18,7 +22,6 @@ function handle_plugin_repo_submission() {
         wp_die('Error: All fields are required.');
     }
 
-    // Construct the GitHub Latest Release API URL
     $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
 
     // Handle file upload
@@ -27,7 +30,6 @@ function handle_plugin_repo_submission() {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
 
         if ($upload && !isset($upload['error'])) {
-            // Insert attachment
             $filetype = wp_check_filetype($upload['file']);
             $attachment = array(
                 'post_mime_type' => $filetype['type'],
@@ -45,44 +47,44 @@ function handle_plugin_repo_submission() {
         }
     }
 
-    // Determine post type and taxonomy
     $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
     $taxonomy = $type === 'plugin' ? 'plugin-category' : 'theme-category';
 
-    // Create the post
     $post_id = wp_insert_post(array(
         'post_title'   => $name,
         'post_content' => $description,
         'post_excerpt' => wp_trim_words($description, 55),
         'post_type'    => $post_type,
-        'post_status'  => 'pending', // Set to pending for moderation
+        'post_status'  => 'pending',
+        'post_author'  => get_current_user_id(), // Link to logged-in user
     ));
 
     if ($post_id) {
-        // Add custom field for GitHub Latest Release URL
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
 
-        // Add categories to the appropriate taxonomy
         $category_list = array_map('trim', explode(',', $categories));
         wp_set_object_terms($post_id, $category_list, $taxonomy);
 
-        // Set the featured image for the post
         if ($featured_image_id) {
             set_post_thumbnail($post_id, $featured_image_id);
         }
 
-        wp_redirect(add_query_arg('submission', 'success', home_url())); // Redirect after success
+        wp_redirect(add_query_arg('submission', 'success', home_url()));
         exit;
     } else {
         wp_die('Error: Unable to create the submission.');
     }
 }
 
+
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission'); // For non-logged-in users
 
 // Form shortcode
 function plugin_repo_submission_form_shortcode() {
+    if (!is_user_logged_in()) {
+        return '<p>You must be logged in to submit a plugin or theme. <a href="' . wp_login_url(get_permalink()) . '">Log in</a> or <a href="' . wp_registration_url() . '">Register</a>.</p>';
+    }
     ob_start(); ?>
     <section class="py-16 bg-white">
         <div class="container mx-auto px-4">
