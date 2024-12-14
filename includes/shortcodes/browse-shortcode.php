@@ -79,8 +79,8 @@ function plugin_repo_grid_shortcode() {
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="#" id="<?php echo esc_attr($latest_release_url); ?>" class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
-                                        Download Latest
+                                    <a href="#" target="_blank" id="<?php echo esc_attr($latest_release_url); ?>" class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
+                                        Download
                                     </a>
                                 </div>
                             </div>
