@@ -2,6 +2,7 @@
 
 namespace TheRepo\Shortcode\Form;
 
+
 function handle_plugin_repo_submission() {
     if (!isset($_POST['plugin_repo_nonce']) || !wp_verify_nonce($_POST['plugin_repo_nonce'], 'plugin_repo_submission')) {
         wp_die('Error: Invalid form submission.');
@@ -16,7 +17,7 @@ function handle_plugin_repo_submission() {
     $github_username = sanitize_text_field($_POST['github_username']);
     $github_repo = sanitize_text_field($_POST['github_repo']);
     $description = sanitize_textarea_field($_POST['description']);
-    $categories = sanitize_text_field($_POST['categories']);
+    $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : array();
 
     if (empty($type) || empty($name) || empty($github_username) || empty($github_repo) || empty($description)) {
         wp_die('Error: All fields are required.');
@@ -51,7 +52,6 @@ function handle_plugin_repo_submission() {
         }
     }
     
-
     // Determine post type and taxonomy
     $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
     $taxonomy = $type === 'plugin' ? 'plugin-category' : 'theme-category';
@@ -72,9 +72,10 @@ function handle_plugin_repo_submission() {
         update_post_meta($post_id, 'github_username', $github_username); // Save GitHub username
         update_post_meta($post_id, 'github_repo', $github_repo);         // Save GitHub repo
 
-        // Set categories
-        $category_list = array_map('trim', explode(',', $categories));
-        wp_set_object_terms($post_id, $category_list, $taxonomy);
+        // Assign categories to the post
+        if (!empty($categories)) {
+            wp_set_object_terms($post_id, $categories, $taxonomy);
+        }
 
         // Set the featured image
         if ($featured_image_id) {
@@ -88,6 +89,7 @@ function handle_plugin_repo_submission() {
         wp_die('Error: Unable to create the submission.');
     }
 }
+
 
 
 
@@ -170,15 +172,10 @@ function plugin_repo_submission_form_shortcode() {
                     <!-- Categories -->
                     <div>
                         <label for="categories" class="block text-sm font-medium text-gray-700">Categories</label>
-                        <input 
-                            type="text" 
-                            name="categories" 
-                            id="categories" 
-                            placeholder="Enter categories" 
-                            required 
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <p class="text-sm text-gray-500 mt-1">Enter a comma-separated list of categories.</p>
+                        <select name="categories[]" id="categories" multiple="multiple" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <!-- Dynamic options will be loaded via Select2 -->
+                        </select>
+                        <p class="text-sm text-gray-500 mt-1">Start typing to search for existing categories or add new ones.</p>
                     </div>
 
                     <!-- Featured Image -->

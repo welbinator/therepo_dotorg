@@ -17,3 +17,10 @@
     background: #53d353;
     color: white;
 }
+
+textarea.select2-search__field {
+    min-height: unset; 
+}
+ul.select2-selection__rendered {
+    margin: 0;
+}

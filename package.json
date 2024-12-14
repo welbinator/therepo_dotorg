@@ -1,0 +1,18 @@
+{
+  "name": "therepo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "select2": "^4.1.0-rc.0"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.7.0"
+  }
+}
