@@ -22,34 +22,41 @@ function handle_plugin_repo_submission() {
         wp_die('Error: All fields are required.');
     }
 
+    // Construct the GitHub Latest Release API URL
     $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
 
     // Handle file upload
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
-
+    
         if ($upload && !isset($upload['error'])) {
             $filetype = wp_check_filetype($upload['file']);
             $attachment = array(
                 'post_mime_type' => $filetype['type'],
                 'post_title'     => sanitize_file_name($_FILES['featured_image']['name']),
                 'post_content'   => '',
-                'post_status'    => 'inherit'
+                'post_status'    => 'inherit',
             );
-
+    
             $featured_image_id = wp_insert_attachment($attachment, $upload['file']);
             require_once(ABSPATH . 'wp-admin/includes/image.php');
             $attach_data = wp_generate_attachment_metadata($featured_image_id, $upload['file']);
             wp_update_attachment_metadata($featured_image_id, $attach_data);
+    
+            // Set as the post's featured image
+            set_post_thumbnail($post_id, $featured_image_id);
         } else {
             wp_die('Error uploading featured image: ' . $upload['error']);
         }
     }
+    
 
+    // Determine post type and taxonomy
     $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
     $taxonomy = $type === 'plugin' ? 'plugin-category' : 'theme-category';
 
+    // Create the post
     $post_id = wp_insert_post(array(
         'post_title'   => $name,
         'post_content' => $description,
@@ -60,21 +67,28 @@ function handle_plugin_repo_submission() {
     ));
 
     if ($post_id) {
+        // Save meta fields
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
+        update_post_meta($post_id, 'github_username', $github_username); // Save GitHub username
+        update_post_meta($post_id, 'github_repo', $github_repo);         // Save GitHub repo
 
+        // Set categories
         $category_list = array_map('trim', explode(',', $categories));
         wp_set_object_terms($post_id, $category_list, $taxonomy);
 
+        // Set the featured image
         if ($featured_image_id) {
             set_post_thumbnail($post_id, $featured_image_id);
         }
 
+        // Redirect after success
         wp_redirect(add_query_arg('submission', 'success', home_url()));
         exit;
     } else {
         wp_die('Error: Unable to create the submission.');
     }
 }
+
 
 
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
