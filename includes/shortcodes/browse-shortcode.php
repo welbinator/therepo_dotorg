@@ -49,9 +49,10 @@ function plugin_repo_grid_shortcode() {
                         $category_names = $categories ? wp_list_pluck($categories, 'name') : [];
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60'; // Fallback thumbnail image
                         $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
+                        $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true);
                         ?>
-                        <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden">
-                            <div class="!p-6">
+                        <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
+                            <div class="!p-6 !pb-12">
                                 <div class="!flex gap-4 !items-start space-x-4 !mb-4">
                                     <a href="<?php the_permalink(); ?>" class="!rounded-md !block">
                                         <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="!rounded-md !object-cover">
@@ -83,6 +84,9 @@ function plugin_repo_grid_shortcode() {
                                     </a>
                                 </div>
                             </div>
+                            <?php if ($free_or_pro === 'pro') : // Only display if the post is "pro" ?>
+                                <div class="pro">Pro</div>
+                            <?php endif; ?>
                         </div>
                     <?php
                     endwhile;
