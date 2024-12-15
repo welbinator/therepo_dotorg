@@ -8,9 +8,13 @@
   \**********************************************************************************************************************************************************************/
 #repo_submission_form div select,
 #repo_submission_form div input,
-#repo_submission_form div textarea {
-    width: 500px;
-    max-width: 100%;
+#repo_submission_form div textarea,
+span.select2 {
+    
+    width: 100%!important;
+}
+#repo_submission_form div.github-wrapper input {
+    width: 250px;
 }
 #featured-image-preview img {
     width: 50px;
@@ -28,7 +32,26 @@
 
 textarea.select2-search__field {
     min-height: unset; 
+    margin: 0;
 }
 ul.select2-selection__rendered {
     margin: 0;
 }
+#repo_submission_form div.github-wrapper input {
+    
+    margin: 0;
+}
+.github-column {
+    width: calc(50% - (var(--spacing)* 2.5));
+}
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid rgba(0, 0, 0, .25);
+    border-radius: 8px;
+    padding: .6em;
+    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / .1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / .1));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+
+
+
