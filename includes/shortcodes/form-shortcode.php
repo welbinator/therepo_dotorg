@@ -131,30 +131,32 @@ function plugin_repo_submission_form_shortcode() {
                         />
                     </div>
 
+                    <div class="github-wrapper flex gap-5">
                     <!-- GitHub Username -->
-                    <div>
-                        <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
-                        <input 
-                            type="text" 
-                            name="github_username" 
-                            id="github_username" 
-                            placeholder="Enter GitHub username" 
-                            required 
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
+                        <div class="github-column">
+                            <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
+                            <input 
+                                type="text" 
+                                name="github_username" 
+                                id="github_username" 
+                                placeholder="GitHub username" 
+                                required 
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
 
-                    <!-- GitHub Repo -->
-                    <div>
-                        <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
-                        <input 
-                            type="text" 
-                            name="github_repo" 
-                            id="github_repo" 
-                            placeholder="Enter GitHub repository name" 
-                            required 
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        <!-- GitHub Repo -->
+                        <div class="github-column">
+                            <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
+                            <input 
+                                type="text" 
+                                name="github_repo" 
+                                id="github_repo" 
+                                placeholder="GitHub repository name" 
+                                required 
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
                     </div>
 
                     <!-- Description -->
