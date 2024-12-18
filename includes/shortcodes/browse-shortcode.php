@@ -96,33 +96,7 @@ function plugin_repo_grid_shortcode() {
             </div>
         </div>
     </section>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const searchField = document.getElementById('plugin-repo-search');
-            const typeFilter = document.getElementById('plugin-repo-type-filter');
-            const categoryFilter = document.getElementById('plugin-repo-category-filter');
-            const grid = document.getElementById('plugin-repo-grid');
-
-            function updateGrid() {
-                const search = searchField.value;
-                const type = typeFilter.value;
-                const category = categoryFilter.value;
-
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', `<?php echo admin_url('admin-ajax.php'); ?>?action=filter_plugins&search=${encodeURIComponent(search)}&type=${encodeURIComponent(type)}&category=${encodeURIComponent(category)}`, true);
-                xhr.onload = function () {
-                    if (xhr.status === 200) {
-                        grid.innerHTML = xhr.responseText;
-                    }
-                };
-                xhr.send();
-            }
-
-            searchField.addEventListener('input', updateGrid);
-            typeFilter.addEventListener('change', updateGrid);
-            categoryFilter.addEventListener('change', updateGrid);
-        });
-    </script>
+    
     <?php
     return ob_get_clean();
 }
