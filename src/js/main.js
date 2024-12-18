@@ -3,25 +3,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const grid = document.getElementById('plugin-repo-grid');
 
     grid.addEventListener('click', function (event) {
+        // Look for the <a> element inside the .github-download-button wrapper
         const button = event.target.closest('.github-download-button a');
+
         if (button) {
             console.log("Debug: Click event triggered on button.");
-    
-            // Ensure this button is not processed twice
+
+            // Prevent duplicate processing of the same button
             if (button.dataset.processed === 'true') {
                 console.log("Debug: Button already processed. Skipping.");
                 return;
             }
-    
+            button.dataset.processed = 'true'; // Mark button as processed
+
+            // Stop event from bubbling to other listeners
+            event.stopPropagation();
+
             const apiUrl = button.id.trim();
             console.log("Debug: API URL from button ID:", apiUrl);
-    
+
             // Check if the API URL starts with GitHub's API prefix
             if (apiUrl.startsWith('https://api.github.com/repos')) {
                 console.log("Debug: Detected GitHub API URL:", apiUrl);
-                event.preventDefault(); 
-                button.dataset.processed = 'true'; // Mark button as processed
-    
+                event.preventDefault();
+
                 fetch(apiUrl, {
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
@@ -51,7 +56,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 console.log("Debug: Detected non-GitHub URL. Processing as normal link:", apiUrl);
                 button.setAttribute('href', apiUrl);
-                button.dataset.processed = 'true'; // Mark button as processed
             }
         }
     });
