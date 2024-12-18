@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const apiUrl = button.id;
 
                       // Check if the API URL starts with GitHub's API prefix
+            console.log("Debug: API URL from button ID:", apiUrl);
+
             if (apiUrl.startsWith('https://api.github.com/repos')) {
                 event.preventDefault(); 
 
