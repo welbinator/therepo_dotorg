@@ -14,16 +14,15 @@ document.addEventListener('DOMContentLoaded', function () {
     console.error('Debug: Grid element not found!');
     return;
   }
-  if (typeof getEventListeners !== 'undefined') {
-    console.log('Debug: Event listeners attached to grid:', getEventListeners(grid));
-  } else {
-    console.log('Debug: `getEventListeners` is not supported in this environment.');
-  }
+
+  // if (typeof getEventListeners !== 'undefined') {
+  //     console.log('Debug: Event listeners attached to grid:', getEventListeners(grid));
+  // } else {
+  //     console.log('Debug: `getEventListeners` is not supported in this environment.');
+  // }
+
   if (grid) {
-    console.log('Debug: Attaching click event listener to grid.');
     grid.addEventListener('click', function (event) {
-      console.log('Debug: Event target:', event.target);
-      console.log('Debug: Event current target:', event.currentTarget);
       // Prevent event bubbling
       event.stopImmediatePropagation();
       event.stopPropagation();
@@ -35,13 +34,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!button) {
         return;
       }
-      console.log('Debug: Button clicked.');
       const apiUrl = button.id;
 
       // Check if the API URL starts with GitHub's API prefix
       if (apiUrl.startsWith('https://api.github.com/repos')) {
         event.preventDefault(); // Prevent the default link behavior
-        console.log('Debug: Valid GitHub API URL detected:', apiUrl);
 
         // Fetch the latest release details from GitHub
         fetch(apiUrl, {
@@ -50,17 +47,14 @@ document.addEventListener('DOMContentLoaded', function () {
             'User-Agent': 'GitHub-Latest-Release-Fetcher'
           }
         }).then(response => {
-          console.log('Debug: Fetch response status: ', response.status);
           if (!response.ok) {
             throw new Error('Network response was not ok: ' + response.statusText);
           }
           return response.json();
         }).then(data => {
-          console.log('Debug: GitHub API response data: ', data);
           if (data && data.assets && data.assets.length > 0) {
             // Get the first asset's download URL
             const downloadUrl = data.assets[0].browser_download_url;
-            console.log('Debug: Browser download URL: ', downloadUrl);
 
             // Trigger the download
             window.location.href = downloadUrl;
