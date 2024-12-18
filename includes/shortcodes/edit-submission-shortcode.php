@@ -56,20 +56,24 @@ function repo_edit_form_shortcode() {
                                 </label>
                             </div>
                         </div>
-                        <div>
+                       
+                        <!-- Download URL Field Wrapper -->
+                        <div id="download_url_field" style="display: none;">
                             <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
-                            <input type="url" name="download_url" id="download_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                            <p class="text-sm text-gray-500 mt-1">Provide the direct URL to download your plugin/theme.</p>
+                            <input type="url" name="download_url" id="download_url" class="mt-1 block w-full px-3 py-2 border rounded-md">
                         </div>
 
-                        <div>
-                            <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
-                            <input type="text" name="github_username" id="github_username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
 
-                        <div>
-                            <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
-                            <input type="text" name="github_repo" id="github_repo" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                        <!-- GitHub Fields Wrapper -->
+                        <div id="github_fields">
+                            <div>
+                                <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
+                                <input type="text" name="github_username" id="github_username" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
+                                <input type="text" name="github_repo" id="github_repo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                            </div>
                         </div>
 
                         <div>
@@ -99,48 +103,100 @@ function repo_edit_form_shortcode() {
         </div>
     </section>
     <script>
-        document.getElementById('submission_id').addEventListener('change', function () {
-            const submissionId = this.value;
+    // Function to toggle GitHub and Download URL fields based on "Hosted on GitHub?"
+    function toggleFields(hostedOnGitHub) {
+        const githubFields = document.getElementById('github_fields'); // Wrapper for GitHub fields
+        const downloadUrlField = document.getElementById('download_url_field'); // Download URL field wrapper
 
-            if (!submissionId) {
-                document.getElementById('edit-fields').style.display = 'none';
-                return;
-            }
+        if (hostedOnGitHub === 'yes') {
+            // Show GitHub fields, hide Download URL field
+            githubFields.style.display = 'block';
+            downloadUrlField.style.display = 'none';
+            document.getElementById('github_username').setAttribute('required', 'required');
+            document.getElementById('github_repo').setAttribute('required', 'required');
+            document.getElementById('download_url').removeAttribute('required');
+        } else {
+            // Hide GitHub fields, show Download URL field
+            githubFields.style.display = 'none';
+            downloadUrlField.style.display = 'block';
+            document.getElementById('github_username').removeAttribute('required');
+            document.getElementById('github_repo').removeAttribute('required');
+            document.getElementById('download_url').setAttribute('required', 'required');
+        }
+    }
 
-            document.getElementById('edit-fields').style.display = 'block';
+    // Event listener for submission dropdown change
+    document.getElementById('submission_id').addEventListener('change', function () {
+        const submissionId = this.value;
 
-            fetch(`<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=get_submission_data&id=${submissionId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const submission = data.data;
+        if (!submissionId) {
+            // Hide edit fields if no submission is selected
+            document.getElementById('edit-fields').style.display = 'none';
+            return;
+        }
 
-                        document.getElementById('name').value = submission.name || '';
-                        document.getElementById('github_username').value = submission.github_username || '';
-                        document.getElementById('github_repo').value = submission.github_repo || '';
-                        document.getElementById('description').value = submission.description || '';
-                        document.getElementById('categories').value = submission.categories || '';
-                        document.getElementById('download_url').value = submission.download_url || ''; // Populate Download URL
+        // Show edit fields when a submission is selected
+        document.getElementById('edit-fields').style.display = 'block';
 
-                        const imagePreviewContainer = document.getElementById('featured-image-preview');
-                        if (submission.featured_image) {
-                            imagePreviewContainer.innerHTML = `
-                                <img src="${submission.featured_image}" alt="Featured Image" class="mb-4 w-24 h-24 object-cover rounded">
-                            `;
-                        } else {
-                            imagePreviewContainer.innerHTML = '<p>No featured image is currently set. Upload an image to add one.</p>';
-                        }
-                    } else {
-                        console.error('Error:', data.data);
-                        alert('Failed to load submission data. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching submission data:', error);
-                    alert('An error occurred. Please try again.');
-                });
+        // Fetch submission data via AJAX
+        fetch(`<?php echo esc_url(admin_url('admin-ajax.php')); ?>?action=get_submission_data&id=${submissionId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const submission = data.data;
+
+                    // Populate form fields
+                    document.getElementById('name').value = submission.name || '';
+                    document.getElementById('github_username').value = submission.github_username || '';
+                    document.getElementById('github_repo').value = submission.github_repo || '';
+                    document.getElementById('description').value = submission.description || '';
+                    document.getElementById('categories').value = submission.categories || '';
+                    document.getElementById('download_url').value = submission.download_url || '';
+
+                    // Set "Hosted on GitHub?" value
+                    const hostedOnGitHub = submission.hosted_on_github || 'yes';
+                    document.querySelector(`input[name="hosted_on_github"][value="${hostedOnGitHub}"]`).checked = true;
+
+                    // Toggle the appropriate fields based on the hostedOnGitHub value
+                    toggleFields(hostedOnGitHub);
+
+                    console.log('Fields populated and toggled based on submission data.');
+                } else {
+                    console.error('Error fetching submission data:', data.data);
+                    alert('Failed to load submission data. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error during AJAX request:', error);
+                alert('An error occurred while fetching submission data. Check the console for details.');
+            });
+    });
+
+    // Initialize event listeners on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Attach event listeners to Hosted on GitHub radio buttons
+        document.querySelectorAll('input[name="hosted_on_github"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                toggleFields(this.value);
+            });
         });
-    </script>
+
+        // Ensure proper display of fields when the page loads
+        const initialSelection = document.querySelector('input[name="hosted_on_github"]:checked').value;
+        toggleFields(initialSelection);
+
+        // Ensure #edit-fields is visible if a submission is pre-selected
+        const submissionId = document.getElementById('submission_id').value;
+        if (submissionId) {
+            document.getElementById('edit-fields').style.display = 'block';
+        }
+    });
+</script>
+
+
+
+
+
     <?php
     return ob_get_clean();
 }
