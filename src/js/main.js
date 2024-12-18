@@ -6,12 +6,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    // if (typeof getEventListeners !== 'undefined') {
-    //     console.log('Debug: Event listeners attached to grid:', getEventListeners(grid));
-    // } else {
-    //     console.log('Debug: `getEventListeners` is not supported in this environment.');
-    // }
-
     if (grid) {
         
         grid.addEventListener('click', function (event) {
@@ -84,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.setAttribute('href', apiUrl);
             }
             
-        }, { once: true });
+        });
        
         
     }

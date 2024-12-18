@@ -14,13 +14,6 @@ document.addEventListener('DOMContentLoaded', function () {
     console.error('Debug: Grid element not found!');
     return;
   }
-
-  // if (typeof getEventListeners !== 'undefined') {
-  //     console.log('Debug: Event listeners attached to grid:', getEventListeners(grid));
-  // } else {
-  //     console.log('Debug: `getEventListeners` is not supported in this environment.');
-  // }
-
   if (grid) {
     grid.addEventListener('click', function (event) {
       // Prevent event bubbling
@@ -71,8 +64,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // If the URL is not a GitHub API URL, update the href and let it function normally
         button.setAttribute('href', apiUrl);
       }
-    }, {
-      once: true
     });
   }
 
