@@ -104,14 +104,9 @@ add_action('wp_ajax_get_submission_data', function () {
     $submission_id = absint($_GET['id']);
     $post = get_post($submission_id);
 
-    // Ensure the post exists and belongs to the logged-in user
     if (!$post || $post->post_author != get_current_user_id()) {
         wp_send_json_error('Unauthorized access to this submission.', 403);
     }
-
-    // Get submission details
-    $featured_image_id = get_post_thumbnail_id($submission_id); // Get the featured image ID
-    $featured_image_url = $featured_image_id ? wp_get_attachment_url($featured_image_id) : ''; // Get the image URL
 
     $data = [
         'name' => $post->post_title,
@@ -119,12 +114,19 @@ add_action('wp_ajax_get_submission_data', function () {
         'github_repo' => get_post_meta($submission_id, 'github_repo', true),
         'description' => $post->post_content,
         'categories' => implode(', ', wp_get_post_terms($submission_id, get_post_type($submission_id) === 'plugin' ? 'plugin-category' : 'theme-category', ['fields' => 'names'])),
-        'featured_image' => $featured_image_url, // Add the image URL to the data
+        'download_url' => get_post_meta($submission_id, 'download_url', true),
+        'hosted_on_github' => get_post_meta($submission_id, 'hosted_on_github', true) ?: 'yes',
+        'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($submission_id)) ?: '',
     ];
 
+    // Log the data being returned for debugging
+    error_log('Submission Data: ' . print_r($data, true));
 
     wp_send_json_success($data);
 });
+
+
+
 
 // category select2 ajax
 add_action('wp_ajax_get_categories', __NAMESPACE__ . '\\get_categories');

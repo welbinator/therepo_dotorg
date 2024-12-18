@@ -9,11 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (button) {
             const apiUrl = button.id;
 
-            // Debugging
-            console.log("Debug: Button clicked.");
-            console.log("Debug: API URL from button ID: ", apiUrl);
-
-            // Check if the API URL starts with GitHub's API prefix
+                      // Check if the API URL starts with GitHub's API prefix
             if (apiUrl.startsWith('https://api.github.com/repos')) {
                 event.preventDefault(); // Prevent the default link behavior
 
@@ -25,20 +21,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                     .then(response => {
-                        console.log("Debug: Fetch response status: ", response.status);
+                        
                         if (!response.ok) {
                             throw new Error('Network response was not ok: ' + response.statusText);
                         }
                         return response.json();
                     })
                     .then(data => {
-                        console.log("Debug: GitHub API response data: ", data);
+                       
 
                         if (data && data.assets && data.assets.length > 0) {
                             // Get the first asset's download URL
                             const downloadUrl = data.assets[0].browser_download_url;
 
-                            console.log("Debug: Browser download URL: ", downloadUrl);
+                           
 
                             // Trigger the download
                             window.location.href = downloadUrl;

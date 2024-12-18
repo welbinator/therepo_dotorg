@@ -1,6 +1,11 @@
-#repo_submission_form div select,
-#repo_submission_form div input,
-#repo_submission_form div textarea,
+form#repo_submission_form {
+    width: 600px;
+    max-width: 100%;
+}
+
+#repo_submission_form div select, 
+#repo_submission_form div input:not([type="radio"]), 
+#repo_submission_form div textarea, 
 span.select2 {
     
     width: 100%!important;

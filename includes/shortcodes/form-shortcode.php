@@ -12,25 +12,40 @@ function handle_plugin_repo_submission() {
         wp_die('Error: You must be logged in to submit a plugin or theme.');
     }
 
+    // Gather input values
     $type = sanitize_text_field($_POST['type']);
     $name = sanitize_text_field($_POST['name']);
+    $hosted_on_github = sanitize_text_field($_POST['hosted_on_github']);
     $github_username = sanitize_text_field($_POST['github_username']);
     $github_repo = sanitize_text_field($_POST['github_repo']);
+    $download_url = esc_url_raw($_POST['download_url']);
     $description = sanitize_textarea_field($_POST['description']);
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : array();
 
-    if (empty($type) || empty($name) || empty($github_username) || empty($github_repo) || empty($description)) {
+    // General field validation
+    if (empty($type) || empty($name) || empty($description)) {
         wp_die('Error: All fields are required.');
     }
 
-    // Construct the GitHub Latest Release API URL
-    $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
+    // Conditional validation based on "Hosted on GitHub?"
+    if ($hosted_on_github === 'yes') {
+        if (empty($github_username) || empty($github_repo)) {
+            wp_die('Error: GitHub Username and Repository are required when hosted on GitHub.');
+        }
+        // Construct the GitHub Latest Release API URL
+        $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
+    } else {
+        if (empty($download_url)) {
+            wp_die('Error: Download URL is required when not hosted on GitHub.');
+        }
+        $latest_release_url = $download_url; // Use download URL instead
+    }
 
-    // Handle file upload
+    // Handle file upload for featured image
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
-    
+
         if ($upload && !isset($upload['error'])) {
             $filetype = wp_check_filetype($upload['file']);
             $attachment = array(
@@ -39,19 +54,16 @@ function handle_plugin_repo_submission() {
                 'post_content'   => '',
                 'post_status'    => 'inherit',
             );
-    
+
             $featured_image_id = wp_insert_attachment($attachment, $upload['file']);
             require_once(ABSPATH . 'wp-admin/includes/image.php');
             $attach_data = wp_generate_attachment_metadata($featured_image_id, $upload['file']);
             wp_update_attachment_metadata($featured_image_id, $attach_data);
-    
-            // Set as the post's featured image
-            set_post_thumbnail($post_id, $featured_image_id);
         } else {
             wp_die('Error uploading featured image: ' . $upload['error']);
         }
     }
-    
+
     // Determine post type and taxonomy
     $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
     $taxonomy = $type === 'plugin' ? 'plugin-category' : 'theme-category';
@@ -63,14 +75,19 @@ function handle_plugin_repo_submission() {
         'post_excerpt' => wp_trim_words($description, 55),
         'post_type'    => $post_type,
         'post_status'  => 'pending',
-        'post_author'  => get_current_user_id(), // Link to logged-in user
+        'post_author'  => get_current_user_id(),
     ));
 
     if ($post_id) {
         // Save meta fields
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
-        update_post_meta($post_id, 'github_username', $github_username); // Save GitHub username
-        update_post_meta($post_id, 'github_repo', $github_repo);         // Save GitHub repo
+        update_post_meta($post_id, 'hosted_on_github', $hosted_on_github);
+        if ($hosted_on_github === 'yes') {
+            update_post_meta($post_id, 'github_username', $github_username);
+            update_post_meta($post_id, 'github_repo', $github_repo);
+        } else {
+            update_post_meta($post_id, 'download_url', $download_url);
+        }
 
         // Assign categories to the post
         if (!empty($categories)) {
@@ -89,8 +106,6 @@ function handle_plugin_repo_submission() {
         wp_die('Error: Unable to create the submission.');
     }
 }
-
-
 
 
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
@@ -131,8 +146,21 @@ function plugin_repo_submission_form_shortcode() {
                         />
                     </div>
 
-                    <div class="github-wrapper flex gap-5">
-                    <!-- GitHub Username -->
+                    <!-- Hosted on GitHub? -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Hosted on GitHub?</label>
+                        <div class="mt-1">
+                            <label>
+                                <input type="radio" name="hosted_on_github" value="yes" checked> Yes
+                            </label>
+                            <label class="ml-4">
+                                <input type="radio" name="hosted_on_github" value="no"> No
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- GitHub Username and Repo -->
+                    <div id="github-fields" class="github-wrapper flex gap-5">
                         <div class="github-column">
                             <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
                             <input 
@@ -145,7 +173,6 @@ function plugin_repo_submission_form_shortcode() {
                             />
                         </div>
 
-                        <!-- GitHub Repo -->
                         <div class="github-column">
                             <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
                             <input 
@@ -157,6 +184,19 @@ function plugin_repo_submission_form_shortcode() {
                                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
+                    </div>
+
+                    <!-- Download URL -->
+                    <div id="download-url-field" style="display: none;">
+                        <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
+                        <input 
+                            type="url" 
+                            name="download_url" 
+                            id="download_url" 
+                            placeholder="Enter download URL" 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <p class="text-sm text-gray-500 mt-1">Provide the direct URL to download your plugin/theme.</p>
                     </div>
 
                     <!-- Description -->
@@ -204,16 +244,66 @@ function plugin_repo_submission_form_shortcode() {
             </div>
         </div>
     </section>
+
+    <!-- JavaScript -->
     <script>
+        // Toggle Name Label Based on Type
         document.getElementById('type').addEventListener('change', function () {
             const type = this.value;
             const nameLabel = document.querySelector('label[for="name"]');
             nameLabel.textContent = type === 'plugin' ? 'Plugin Name' : 'Theme Name';
         });
+
+        // Toggle Fields Based on Hosted on GitHub
+        document.addEventListener('DOMContentLoaded', function () {
+    const hostedRadioButtons = document.getElementsByName('hosted_on_github');
+    const githubFields = document.getElementById('github-fields');
+    const downloadUrlField = document.getElementById('download-url-field');
+    const githubUsernameField = document.getElementById('github_username');
+    const githubRepoField = document.getElementById('github_repo');
+
+    function toggleFields() {
+        const isHostedOnGitHub = document.querySelector('input[name="hosted_on_github"]:checked').value === 'yes';
+
+        if (isHostedOnGitHub) {
+            // Show GitHub fields and hide Download URL field
+            githubFields.style.display = 'flex';
+            downloadUrlField.style.display = 'none';
+
+            // Add 'required' to GitHub fields
+            githubUsernameField.setAttribute('required', 'required');
+            githubRepoField.setAttribute('required', 'required');
+
+            // Remove 'required' from Download URL
+            document.getElementById('download_url').removeAttribute('required');
+        } else {
+            // Hide GitHub fields and show Download URL field
+            githubFields.style.display = 'none';
+            downloadUrlField.style.display = 'block';
+
+            // Remove 'required' from GitHub fields
+            githubUsernameField.removeAttribute('required');
+            githubRepoField.removeAttribute('required');
+
+            // Add 'required' to Download URL
+            document.getElementById('download_url').setAttribute('required', 'required');
+        }
+    }
+
+    // Add event listeners
+    hostedRadioButtons.forEach(button => {
+        button.addEventListener('change', toggleFields);
+    });
+
+    // Initialize fields
+    toggleFields();
+});
+
     </script>
     <?php
     return ob_get_clean();
 }
+
 
 add_shortcode('plugin_repo_form', __NAMESPACE__ . '\\plugin_repo_submission_form_shortcode');
 
