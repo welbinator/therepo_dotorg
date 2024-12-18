@@ -46,6 +46,12 @@ function repo_edit_form_shortcode() {
                         </div>
 
                         <div>
+                            <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
+                            <input type="url" name="download_url" id="download_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                            <p class="text-sm text-gray-500 mt-1">Provide the direct URL to download your plugin/theme.</p>
+                        </div>
+
+                        <div>
                             <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
                             <input type="text" name="github_username" id="github_username" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
                         </div>
@@ -103,12 +109,12 @@ function repo_edit_form_shortcode() {
                         document.getElementById('github_repo').value = submission.github_repo || '';
                         document.getElementById('description').value = submission.description || '';
                         document.getElementById('categories').value = submission.categories || '';
+                        document.getElementById('download_url').value = submission.download_url || ''; // Populate Download URL
 
                         const imagePreviewContainer = document.getElementById('featured-image-preview');
                         if (submission.featured_image) {
                             imagePreviewContainer.innerHTML = `
                                 <img src="${submission.featured_image}" alt="Featured Image" class="mb-4 w-24 h-24 object-cover rounded">
-                                
                             `;
                         } else {
                             imagePreviewContainer.innerHTML = '<p>No featured image is currently set. Upload an image to add one.</p>';
@@ -155,6 +161,8 @@ function handle_repo_edit_submission() {
     $github_repo = sanitize_text_field($_POST['github_repo']);
     $description = sanitize_textarea_field($_POST['description']);
     $categories = sanitize_text_field($_POST['categories']);
+    $download_url = esc_url_raw($_POST['download_url']);
+
 
     if (empty($name) || empty($github_username) || empty($github_repo) || empty($description)) {
         wp_die('Error: All fields are required.');
@@ -170,6 +178,8 @@ function handle_repo_edit_submission() {
     // Update GitHub meta fields
     update_post_meta($submission_id, 'github_username', $github_username);
     update_post_meta($submission_id, 'github_repo', $github_repo);
+    update_post_meta($submission_id, 'download_url', $download_url);
+
 
     // Update categories
     $post_type = $post->post_type;

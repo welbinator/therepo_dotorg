@@ -113,18 +113,26 @@ add_action('wp_ajax_get_submission_data', function () {
     $featured_image_id = get_post_thumbnail_id($submission_id); // Get the featured image ID
     $featured_image_url = $featured_image_id ? wp_get_attachment_url($featured_image_id) : ''; // Get the image URL
 
+    // Add the Download URL meta field
+    $download_url = get_post_meta($submission_id, 'download_url', true);
+
     $data = [
         'name' => $post->post_title,
         'github_username' => get_post_meta($submission_id, 'github_username', true),
         'github_repo' => get_post_meta($submission_id, 'github_repo', true),
         'description' => $post->post_content,
-        'categories' => implode(', ', wp_get_post_terms($submission_id, get_post_type($submission_id) === 'plugin' ? 'plugin-category' : 'theme-category', ['fields' => 'names'])),
+        'categories' => implode(', ', wp_get_post_terms(
+            $submission_id, 
+            get_post_type($submission_id) === 'plugin' ? 'plugin-category' : 'theme-category',
+            ['fields' => 'names']
+        )),
         'featured_image' => $featured_image_url, // Add the image URL to the data
+        'download_url' => $download_url, // Include the Download URL
     ];
-
 
     wp_send_json_success($data);
 });
+
 
 // category select2 ajax
 add_action('wp_ajax_get_categories', __NAMESPACE__ . '\\get_categories');

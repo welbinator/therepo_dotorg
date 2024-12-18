@@ -131,8 +131,23 @@ function plugin_repo_submission_form_shortcode() {
                         />
                     </div>
 
+                    <!-- Download URL -->
+                    <div>
+                        <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
+                        <input 
+                            type="url" 
+                            name="download_url" 
+                            id="download_url" 
+                            placeholder="Enter download URL" 
+                            required 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <p class="text-sm text-gray-500 mt-1">Provide the direct URL to download your plugin/theme.</p>
+                    </div>
+
+                    <!-- GitHub Username and Repo -->
                     <div class="github-wrapper flex gap-5">
-                    <!-- GitHub Username -->
+                        <!-- GitHub Username -->
                         <div class="github-column">
                             <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
                             <input 
@@ -214,6 +229,7 @@ function plugin_repo_submission_form_shortcode() {
     <?php
     return ob_get_clean();
 }
+
 
 add_shortcode('plugin_repo_form', __NAMESPACE__ . '\\plugin_repo_submission_form_shortcode');
 
