@@ -3,19 +3,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const grid = document.getElementById('plugin-repo-grid');
 
     grid.addEventListener('click', function (event) {
-        // Look for the <a> element inside the .github-download-button wrapper
         const button = event.target.closest('.github-download-button a');
-
         if (button) {
-            const apiUrl = button.id;
-
-                      // Check if the API URL starts with GitHub's API prefix
+            console.log("Debug: Click event triggered on button.");
+    
+            // Ensure this button is not processed twice
+            if (button.dataset.processed === 'true') {
+                console.log("Debug: Button already processed. Skipping.");
+                return;
+            }
+    
+            const apiUrl = button.id.trim();
             console.log("Debug: API URL from button ID:", apiUrl);
-
+    
+            // Check if the API URL starts with GitHub's API prefix
             if (apiUrl.startsWith('https://api.github.com/repos')) {
+                console.log("Debug: Detected GitHub API URL:", apiUrl);
                 event.preventDefault(); 
-
-                // Fetch the latest release details from GitHub
+                button.dataset.processed = 'true'; // Mark button as processed
+    
                 fetch(apiUrl, {
                     headers: {
                         'Accept': 'application/vnd.github.v3+json',
@@ -23,23 +29,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                     .then(response => {
-                        
                         if (!response.ok) {
                             throw new Error('Network response was not ok: ' + response.statusText);
                         }
                         return response.json();
                     })
                     .then(data => {
-                       
-
                         if (data && data.assets && data.assets.length > 0) {
-                            // Get the first asset's download URL
                             const downloadUrl = data.assets[0].browser_download_url;
-
-                           
-
-                            // Trigger the download
-                            window.location.href = downloadUrl;
+                            console.log("Debug: Download URL fetched from GitHub:", downloadUrl);
+                            window.location.href = downloadUrl; // Trigger download
                         } else {
                             alert('No downloadable assets found in the latest release.');
                             console.error("Debug: No assets available in the release data.");
@@ -50,12 +49,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         alert('Failed to fetch release information. Please try again later.');
                     });
             } else {
-                // If the URL is not a GitHub API URL, update the href and let it function normally
-                console.log("Debug: URL does not match GitHub API. Updating href to: ", apiUrl);
+                console.log("Debug: Detected non-GitHub URL. Processing as normal link:", apiUrl);
                 button.setAttribute('href', apiUrl);
+                button.dataset.processed = 'true'; // Mark button as processed
             }
         }
     });
+    
 
     // Suggestions and categories functionality
     const categoriesInput = document.getElementById('categories');
