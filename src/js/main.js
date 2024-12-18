@@ -1,10 +1,26 @@
 document.addEventListener('DOMContentLoaded', function () {
     // Attach an event listener to the parent container
     const grid = document.getElementById('plugin-repo-grid');
+    if (!grid) {
+        console.error('Debug: Grid element not found!');
+        return;
+    }
+
+    if (typeof getEventListeners !== 'undefined') {
+        console.log('Debug: Event listeners attached to grid:', getEventListeners(grid));
+    } else {
+        console.log('Debug: `getEventListeners` is not supported in this environment.');
+    }
 
     if (grid) {
+        
+        console.log('Debug: Attaching click event listener to grid.');
+        
         grid.addEventListener('click', function (event) {
+            console.log('Debug: Event target:', event.target);
+            console.log('Debug: Event current target:', event.currentTarget);
             // Prevent event bubbling
+            event.stopImmediatePropagation();
             event.stopPropagation();
         
             // Look for the <a> element inside the .github-download-button wrapper
@@ -70,7 +86,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 // If the URL is not a GitHub API URL, update the href and let it function normally
                 button.setAttribute('href', apiUrl);
             }
-        });
+            
+        }, { once: true });
+       
         
     }
 
