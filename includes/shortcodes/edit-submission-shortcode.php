@@ -44,7 +44,18 @@ function repo_edit_form_shortcode() {
                             <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
                             <input type="text" name="name" id="name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
                         </div>
-
+                        <!-- Hosted on GitHub? -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Hosted on GitHub?</label>
+                            <div class="mt-1">
+                                <label>
+                                    <input type="radio" name="hosted_on_github" value="yes" checked> Yes
+                                </label>
+                                <label class="ml-4">
+                                    <input type="radio" name="hosted_on_github" value="no"> No
+                                </label>
+                            </div>
+                        </div>
                         <div>
                             <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
                             <input type="url" name="download_url" id="download_url" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
