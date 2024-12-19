@@ -13,7 +13,7 @@ function user_submissions_shortcode() {
     ?>
     <section class="!py-16">
         <div class="!container !mx-auto !px-4">
-            <div id="plugin-repo-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div id="account-page-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php
                 $query = new \WP_Query([
                     'post_type' => ['plugin', 'theme_repo'],
@@ -28,7 +28,7 @@ function user_submissions_shortcode() {
                         $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
                         $category_names = $categories ? wp_list_pluck($categories, 'name') : [];
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60';
-                        $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
+                        $edit_link = get_edit_post_link(get_the_ID());
                         ?>
                         <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden">
                             <div class="!p-6">
@@ -58,8 +58,8 @@ function user_submissions_shortcode() {
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="#" target="_blank" id="<?php echo esc_attr($latest_release_url); ?>" class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
-                                        Download
+                                    <a href="<?php echo esc_url($edit_link); ?>" class="!bg-yellow-500 !hover:bg-yellow-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
+                                        Edit
                                     </a>
                                 </div>
                             </div>
