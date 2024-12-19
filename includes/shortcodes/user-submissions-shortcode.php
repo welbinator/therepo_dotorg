@@ -47,17 +47,8 @@ function user_submissions_shortcode() {
                                         </div>
                                     </div>
                                 </div>
-                                <p class="!text-gray-600 !mb-4"><?php echo esc_html(wp_trim_words(get_the_content(), 20)); ?></p>
-                                <div class="!flex flex-wrap !justify-between !items-center github-download-button">
-                                    <div class="!flex space-x-2 gap-3 !mb-5">
-                                        <?php if (!empty($category_names)) : ?>
-                                            <?php foreach ($category_names as $category_name) : ?>
-                                                <span class="!px-2 !py-1 !bg-gray-100 !text-gray-600 !text-xs !rounded-full !whitespace-nowrap">
-                                                    <?php echo esc_html($category_name); ?>
-                                                </span>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </div>
+                                <div class="!flex flex-wrap !justify-end !items-center github-download-button">
+                                    
                                     <a href="<?php echo esc_url($edit_link); ?>" class="!bg-yellow-500 !hover:bg-yellow-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
                                         Edit
                                     </a>
