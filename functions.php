@@ -57,3 +57,26 @@ add_filter('ajax_query_attachments_args', function ($query) {
     return $query;
 });
 
+add_action('admin_init', function () {
+    // Allow AJAX requests for all users
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        return;
+    }
+
+    // Get the current user
+    $user = wp_get_current_user();
+
+    // Check if the user is a subscriber
+    if (in_array('subscriber', (array) $user->roles)) {
+        // Allow access to wp-admin/post.php
+        if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'post.php') !== false) {
+            return;
+        }
+
+        // Redirect all other wp-admin access to the homepage
+        wp_redirect(home_url());
+        exit;
+    }
+});
+
+
