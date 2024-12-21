@@ -80,3 +80,107 @@ add_action('admin_init', function () {
 });
 
 
+function display_latest_version($atts) {
+    $post_id = get_the_ID();
+    $github_url = get_post_meta($post_id, 'latest_release_url', true);
+
+    if (empty($github_url) || !filter_var($github_url, FILTER_VALIDATE_URL)) {
+        return 'Invalid or missing GitHub URL.';
+    }
+
+    $response = wp_remote_get($github_url, [
+        'headers' => [
+            'Accept' => 'application/vnd.github.v3+json',
+            'User-Agent' => 'WordPress GitHub Version Fetcher',
+        ],
+    ]);
+
+    if (is_wp_error($response)) {
+        return 'Error: ' . $response->get_error_message();
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $data = json_decode($body, true);
+
+    if (isset($data['tag_name'])) {
+        return '<p>' . esc_html($data['tag_name']) . '</p>';
+    }
+    
+
+    return 'Version information could not be retrieved.';
+}
+
+add_shortcode('latest_version', __NAMESPACE__ . '\\display_latest_version');
+
+function fetch_latest_release_date($atts) {
+    // Get the repository URL from the custom field
+    $github_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
+
+    if (empty($github_url)) {
+        return '<p>No GitHub URL provided.</p>';
+    }
+
+    // Fetch data from the GitHub API
+    $response = wp_remote_get($github_url, [
+        'headers' => [
+            'Accept' => 'application/vnd.github.v3+json',
+        ]
+    ]);
+
+    if (is_wp_error($response)) {
+        return '<p>Failed to fetch release date information.</p>';
+    }
+
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+
+    // Check for created_at in the API response
+    if (isset($data['created_at'])) {
+        // Format the date
+        $release_date = date('F j, Y', strtotime($data['created_at']));
+
+        return '<p>' . esc_html($release_date) . '</p>';
+    } else {
+        return '<p>Release date information not available.</p>';
+    }
+}
+add_shortcode('latest_release_date', __NAMESPACE__ . '\\fetch_latest_release_date');
+
+function fetch_latest_release_download_count($atts) {
+    $post_id = get_the_ID();
+    $github_url = get_post_meta($post_id, 'latest_release_url', true);
+
+    if (empty($github_url)) {
+        return '<p>No GitHub URL provided.</p>';
+    }
+
+    $response = wp_remote_get($github_url, [
+        'headers' => [
+            'Accept' => 'application/vnd.github.v3+json',
+        ]
+    ]);
+
+    if (is_wp_error($response)) {
+        error_log('GitHub API Error: ' . $response->get_error_message());
+        return '<p>Failed to fetch download count information.</p>';
+    }
+
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (isset($data['assets']) && is_array($data['assets'])) {
+        $total_downloads = 0;
+
+        foreach ($data['assets'] as $asset) {
+            $total_downloads += $asset['download_count'];
+        }
+
+        return '<p>' . esc_html(number_format($total_downloads)) . '</p>';
+    } else {
+        error_log('GitHub API Data Error: ' . print_r($data, true));
+        return '<p>No download information available.</p>';
+    }
+}
+add_shortcode('latest_release_downloads', __NAMESPACE__ . '\\fetch_latest_release_download_count');
+
+
+
+

@@ -84,7 +84,7 @@ function plugin_repo_grid_shortcode() {
                                     </a>
                                 </div>
                             </div>
-                            <?php if ($free_or_pro === 'pro') : // Only display if the post is "pro" ?>
+                            <?php if ($free_or_pro === 'Pro') : // Only display if the post is "pro" ?>
                                 <div class="pro">Pro</div>
                             <?php endif; ?>
                         </div>
