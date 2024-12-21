@@ -43,9 +43,17 @@ function filter_plugins() {
     if ($query->have_posts()) :
         while ($query->have_posts()) : $query->the_post();
             $post_type = get_post_type() === 'plugin' ? 'Plugin' : 'Theme';
+            
+            // Safely fetch categories
             $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
-            $category_names = $categories ? wp_list_pluck($categories, 'name') : [];
+            $category_names = $categories && !is_wp_error($categories) ? wp_list_pluck($categories, 'name') : [];
+
+            // Safely fetch tags
+            $tags = get_the_terms(get_the_ID(), 'plugin-tags');
+            $tag_names = $tags && !is_wp_error($tags) ? wp_list_pluck($tags, 'name') : [];
+
             $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60'; // Fallback thumbnail image
+            $cover_image = get_post_meta(get_the_ID(), 'cover_image_url', true) ?: ''; // Retrieve cover image URL
             $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
             $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true); // Get the value of the custom field
             ?>
@@ -72,13 +80,23 @@ function filter_plugins() {
                                     </span>
                                 <?php endforeach; ?>
                             <?php endif; ?>
+                            <?php if (!empty($tag_names)) : ?>
+                                <?php foreach ($tag_names as $tag_name) : ?>
+                                    <span class="!px-2 !py-1 !bg-blue-100 !text-blue-600 !text-xs !rounded-full !whitespace-nowrap">
+                                        <?php echo esc_html($tag_name); ?>
+                                    </span>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                         <a href="#" target="_blank" id="<?php echo esc_attr($latest_release_url); ?>" class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
                             Download
                         </a>
                     </div>
+                    <?php if (!empty($cover_image)) : ?>
+                        <img src="<?php echo esc_url($cover_image); ?>" alt="Cover Image" class="!mt-4 !rounded-md">
+                    <?php endif; ?>
                 </div>
-                <?php if ($free_or_pro === 'pro') : // Only display if the post is "pro" ?>
+                <?php if ($free_or_pro === 'Pro') : ?>
                     <div class="pro">Pro</div>
                 <?php endif; ?>
             </div>
@@ -87,11 +105,13 @@ function filter_plugins() {
     else :
         echo '<p class="!text-gray-600 !text-center">No results found.</p>';
     endif;
-    
+
     wp_reset_postdata();
 
     wp_die();
 }
+
+
 add_action('wp_ajax_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
 add_action('wp_ajax_nopriv_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
 
@@ -151,6 +171,35 @@ function get_categories() {
         $results[] = array(
             'id'   => $category->slug,
             'text' => $category->name,
+        );
+    }
+
+    wp_send_json($results);
+}
+
+// Tags select2 AJAX
+add_action('wp_ajax_get_tags', __NAMESPACE__ . '\\get_tags');
+add_action('wp_ajax_nopriv_get_tags', __NAMESPACE__ . '\\get_tags');
+
+function get_tags() {
+    if (!isset($_GET['q'])) {
+        wp_send_json_error('Missing query parameter.');
+        return;
+    }
+
+    $search = sanitize_text_field($_GET['q']);
+    $taxonomy = 'plugin-tags'; // Replace with your tags taxonomy
+    $tags = get_terms(array(
+        'taxonomy'   => $taxonomy,
+        'name__like' => $search,
+        'hide_empty' => false,
+    ));
+
+    $results = array();
+    foreach ($tags as $tag) {
+        $results[] = array(
+            'id'   => $tag->slug,
+            'text' => $tag->name,
         );
     }
 
