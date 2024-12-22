@@ -2,7 +2,7 @@
 /**
  * Plugin Name: The Repo
  * Description: A plugin to manage and display plugins and themes from GitHub repositories.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Your Name
  * Text Domain: the-repo
  */
@@ -13,6 +13,9 @@ namespace TheRepo;
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Define the plugin version as a constant.
+define('THE_REPO_VERSION', '1.0.6');
 
 // Include necessary files.
 require_once plugin_dir_path(__FILE__) . 'includes/post-types.php';
@@ -30,7 +33,7 @@ add_action('wp_enqueue_scripts', function () {
         'the-repo-main-css', // Handle for the stylesheet
         plugin_dir_url(__FILE__) . 'build/index.css', // Path to the CSS file
         [], // Dependencies
-        '1.0.5'
+        THE_REPO_VERSION
     );
 
     // Enqueue JS
@@ -38,7 +41,7 @@ add_action('wp_enqueue_scripts', function () {
         'repo-categories',
         plugin_dir_url(__FILE__) . 'build/index.js', // Directly reference the correct directory
         array('jquery'), 
-        '1.0.5', 
+        THE_REPO_VERSION, 
         true
     );
 
