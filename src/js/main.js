@@ -193,4 +193,35 @@ document.addEventListener('DOMContentLoaded', function () {
         typeFilter.addEventListener('change', updateGrid);
         categoryFilter.addEventListener('change', updateGrid);
     }
+
+    const hostedOnGitHubRadios = document.querySelectorAll('input[name="hosted_on_github"]');
+    const githubFields = document.getElementById('github-fields');
+    const downloadUrlField = document.getElementById('download-url-field');
+
+    // Function to toggle fields
+    function toggleFields() {
+        const selectedValue = document.querySelector('input[name="hosted_on_github"]:checked').value;
+
+        if (selectedValue === 'yes') {
+            githubFields.style.display = 'flex';
+            downloadUrlField.style.display = 'none';
+            document.getElementById('github_username').setAttribute('required', 'required');
+            document.getElementById('github_repo').setAttribute('required', 'required');
+            document.getElementById('download_url').removeAttribute('required');
+        } else {
+            githubFields.style.display = 'none';
+            downloadUrlField.style.display = 'block';
+            document.getElementById('github_username').removeAttribute('required');
+            document.getElementById('github_repo').removeAttribute('required');
+            document.getElementById('download_url').setAttribute('required', 'required');
+        }
+    }
+
+    // Attach change event listeners to radio buttons
+    hostedOnGitHubRadios.forEach(function (radio) {
+        radio.addEventListener('change', toggleFields);
+    });
+
+    // Set initial state based on the default or pre-selected radio button
+    toggleFields();
 });
