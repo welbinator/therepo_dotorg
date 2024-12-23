@@ -37,7 +37,34 @@ function handle_plugin_repo_submission() {
             wp_die('Error: GitHub Username and Repository are required when hosted on GitHub.');
         }
 
-        
+        // Define allowed HTML tags and attributes for sanitization
+        $allowed_html = [
+            'img' => [
+                'src' => [],
+                'alt' => [],
+            ],
+            'p' => [],
+            'a' => [
+                'href' => [],
+            ],
+            'ul' => [],
+            'ol' => [],
+            'li' => [],
+            'strong' => [],
+            'em' => [],
+            'h1' => [],
+            'h2' => [],
+            'h3' => [],
+            'h4' => [],
+            'h5' => [],
+            'h6' => [],
+            'blockquote' => [],
+            'code' => [],
+            'pre' => [],
+            'br' => [],
+            'hr' => [],
+        ];
+
         // Handle "Import Markdown file from GitHub" and "Upload Markdown file" options
 if ($landing_page_content === 'import_from_github') {
     if (!empty($markdown_file_name)) {
@@ -63,6 +90,7 @@ if ($landing_page_content === 'import_from_github') {
         wp_die('Error: Please specify the Markdown file name.');
     }
 } elseif ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
+    
     if (!empty($_FILES['markdown_file']['name'])) {
         $uploaded_file = $_FILES['markdown_file'];
 
@@ -421,7 +449,7 @@ function plugin_repo_submission_form_shortcode() {
         if (isHostedOnGitHub) {
             githubFields.style.display = 'flex';
             downloadUrlField.style.display = 'none';
-            landingPageField.style.display = 'block';
+            // landingPageField.style.display = 'block';
             githubUsernameField.setAttribute('required', 'required');
             githubRepoField.setAttribute('required', 'required');
             document.getElementById('download_url').removeAttribute('required');
@@ -429,7 +457,7 @@ function plugin_repo_submission_form_shortcode() {
         } else {
             githubFields.style.display = 'none';
             downloadUrlField.style.display = 'block';
-            landingPageField.style.display = 'none';
+            // landingPageField.style.display = 'none';
             githubUsernameField.removeAttribute('required');
             githubRepoField.removeAttribute('required');
             document.getElementById('download_url').setAttribute('required', 'required');
