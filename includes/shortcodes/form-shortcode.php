@@ -18,13 +18,17 @@ function handle_plugin_repo_submission() {
     $hosted_on_github = sanitize_text_field($_POST['hosted_on_github']);
     $github_username = sanitize_text_field($_POST['github_username']);
     $github_repo = sanitize_text_field($_POST['github_repo']);
+    $markdown_file_name = sanitize_text_field($_POST['markdown_file_name']);
+    $landing_page_content = sanitize_text_field($_POST['landing_page_content']);
     $download_url = esc_url_raw($_POST['download_url']);
     $description = sanitize_textarea_field($_POST['description']);
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : array();
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', $_POST['tags']) : array();
+    $post_content = $description; // Default to the description if not set elsewhere
+
 
     // General field validation
-    if (empty($type) || empty($name) || empty($description)) {
+    if (empty($type) || empty($name)) {
         wp_die('Error: All fields are required.');
     }
 
@@ -33,20 +37,48 @@ function handle_plugin_repo_submission() {
         if (empty($github_username) || empty($github_repo)) {
             wp_die('Error: GitHub Username and Repository are required when hosted on GitHub.');
         }
-        // Construct the GitHub Latest Release API URL
+
+        // Handle importing Markdown if "Import Markdown file from GitHub" is selected
+        if ($landing_page_content === 'import_from_github' && !empty($markdown_file_name)) {
+            $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/main/" . urlencode($markdown_file_name);
+            $response = wp_remote_get($readme_url);
+        
+            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                $markdown = wp_remote_retrieve_body($response);
+        
+                if (!empty($markdown)) {
+                                                            
+                    $markdown = wp_remote_retrieve_body($response);
+                    
+                    $parsedown = new \Parsedown();
+                    $post_content = $parsedown->text($markdown);
+        
+                    // Ensure content is safe for WordPress
+                    $post_content = wp_kses_post(wp_slash($post_content));
+                } else {
+                    wp_die('Error: Could not fetch the specified Markdown file from GitHub.');
+                }
+            } else {
+                wp_die('Error: Unable to retrieve the specified Markdown file from GitHub.');
+            }
+        } else {
+            $post_content = $description; // Default to the description if not importing Markdown
+        }
+        
+
         $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
     } else {
         if (empty($download_url)) {
             wp_die('Error: Download URL is required when not hosted on GitHub.');
         }
-        $latest_release_url = $download_url; // Use download URL instead
+        $latest_release_url = $download_url;
+        $post_content = $description; // Default to the description if not hosted on GitHub
     }
 
     // Handle file upload for featured image
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
-
         if ($upload && !isset($upload['error'])) {
             $filetype = wp_check_filetype($upload['file']);
             $attachment = array(
@@ -69,7 +101,6 @@ function handle_plugin_repo_submission() {
     $cover_image_url = null;
     if (!empty($_FILES['cover_image_url']['name'])) {
         $upload = wp_handle_upload($_FILES['cover_image_url'], array('test_form' => false));
-
         if ($upload && !isset($upload['error'])) {
             $cover_image_url = $upload['url'];
         } else {
@@ -85,7 +116,7 @@ function handle_plugin_repo_submission() {
     // Create the post
     $post_id = wp_insert_post(array(
         'post_title'   => $name,
-        'post_content' => $description,
+        'post_content' => $post_content,
         'post_excerpt' => wp_trim_words($description, 55),
         'post_type'    => $post_type,
         'post_status'  => 'pending',
@@ -132,12 +163,10 @@ function handle_plugin_repo_submission() {
 }
 
 
-
-
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission'); // For non-logged-in users
 
-// Form shortcode
+
 // Form shortcode
 function plugin_repo_submission_form_shortcode() {
     if (!is_user_logged_in()) {
@@ -209,6 +238,52 @@ function plugin_repo_submission_form_shortcode() {
                                 placeholder="GitHub repository name" 
                                 required 
                                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Landing Page Content -->
+                    <div id="landing-page-field">
+                        <label class="block text-sm font-medium text-gray-700">Landing Page Content</label>
+                        <div class="mt-1 space-y-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="landing_page_content" value="import_from_github" checked>
+                                <span class="ml-2">Import markdown file from GitHub</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="landing_page_content" value="upload_markdown">
+                                <span class="ml-2">Upload markdown file</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="landing_page_content" value="manual_edit">
+                                <span class="ml-2">Edit manually using block editor</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="markdown-fields">
+                        <!-- Markdown File Name -->
+                        <div id="markdown-file-name-field">
+                            <label for="markdown_file_name" class="block text-sm font-medium text-gray-700">Markdown File Name</label>
+                            <input 
+                                type="text" 
+                                name="markdown_file_name" 
+                                id="markdown_file_name" 
+                                placeholder="Enter markdown file name (e.g., readme.md)" 
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+
+
+                        <!-- Markdown File Upload -->
+                        <div id="upload-markdown-field" style="display: none;">
+                            <label for="markdown_file" class="block text-sm font-medium text-gray-700">Upload Markdown File</label>
+                            <input 
+                                type="file" 
+                                name="markdown_file" 
+                                id="markdown_file" 
+                                accept=".md"
+                                class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
                     </div>
@@ -295,8 +370,77 @@ function plugin_repo_submission_form_shortcode() {
 
     <!-- JavaScript -->
     <script>
-        // JavaScript logic for toggling fields remains unchanged
-    </script>
+    // Toggle Name Label Based on Type
+    document.getElementById('type').addEventListener('change', function () {
+        const type = this.value;
+        const nameLabel = document.querySelector('label[for="name"]');
+        nameLabel.textContent = type === 'plugin' ? 'Plugin Name' : 'Theme Name';
+    });
+
+    // Toggle Fields Based on Hosted on GitHub
+    document.addEventListener('DOMContentLoaded', function () {
+        const hostedRadioButtons = document.getElementsByName('hosted_on_github');
+        const githubFields = document.getElementById('github-fields');
+        const downloadUrlField = document.getElementById('download-url-field');
+        const githubUsernameField = document.getElementById('github_username');
+        const githubRepoField = document.getElementById('github_repo');
+        const landingPageField = document.getElementById('landing-page-field');
+        const markdownFileNameField = document.getElementById('markdown-file-name-field');
+        const landingPageRadios = document.getElementsByName('landing_page_content');
+        const markdownFields = document.getElementById('markdown-fields');
+
+        function toggleGitHubFields() {
+        const isHostedOnGitHub = document.querySelector('input[name="hosted_on_github"]:checked').value === 'yes';
+        
+
+        if (isHostedOnGitHub) {
+            githubFields.style.display = 'flex';
+            downloadUrlField.style.display = 'none';
+            landingPageField.style.display = 'block';
+            githubUsernameField.setAttribute('required', 'required');
+            githubRepoField.setAttribute('required', 'required');
+            document.getElementById('download_url').removeAttribute('required');
+            markdownFields.style.display = 'block';
+        } else {
+            githubFields.style.display = 'none';
+            downloadUrlField.style.display = 'block';
+            landingPageField.style.display = 'none';
+            githubUsernameField.removeAttribute('required');
+            githubRepoField.removeAttribute('required');
+            document.getElementById('download_url').setAttribute('required', 'required');
+            markdownFields.style.display = 'none';
+        }
+
+    }
+
+    function toggleMarkdownFileNameField() {
+        const importMarkdownFromGitHub = document.querySelector('input[name="landing_page_content"]:checked').value === 'import_from_github';
+
+        if (importMarkdownFromGitHub) {
+            markdownFileNameField.style.display = "block";
+        } else {
+            markdownFileNameField.style.display = "none";
+        }
+    }
+    
+
+        // Add event listeners
+        hostedRadioButtons.forEach(button => {
+            button.addEventListener('change', toggleGitHubFields);
+        });
+        landingPageRadios.forEach(button => {
+            button.addEventListener('change', toggleMarkdownFileNameField);
+        });
+
+        // Initialize fields
+        toggleGitHubFields();
+        toggleMarkdownFileNameField();
+
+      
+    });
+</script>
+
+
     <?php
     return ob_get_clean();
 }
