@@ -313,21 +313,12 @@ function plugin_repo_submission_form_shortcode() {
 
                     <!-- Landing Page Content -->
                     <div id="landing-page-field">
-                        <label class="block text-sm font-medium text-gray-700">Landing Page Content</label>
-                        <div class="mt-1 space-y-2">
-                            <label class="flex items-center">
-                                <input type="radio" name="landing_page_content" value="import_from_github" checked>
-                                <span class="ml-2">Import markdown/txt file from GitHub</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="landing_page_content" value="upload_markdown">
-                                <span class="ml-2">Upload markdown/html/txt file</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="landing_page_content" value="manual_edit">
-                                <span class="ml-2">Edit manually using block editor</span>
-                            </label>
-                        </div>
+                        <label for="landing_page_content" class="block text-sm font-medium text-gray-700">Landing Page Content</label>
+                        <select name="landing_page_content" id="landing_page_content" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="import_from_github" selected>Import markdown/txt file from GitHub</option>
+                            <option value="upload_markdown">Upload markdown/html/txt file</option>
+                            <option value="manual_edit">Edit manually using block editor</option>
+                        </select>
                     </div>
 
                     <div id="markdown-fields">
@@ -436,87 +427,63 @@ function plugin_repo_submission_form_shortcode() {
 
     // Toggle Fields Based on Hosted on GitHub
     document.addEventListener('DOMContentLoaded', function () {
-    const hostedRadioButtons = document.getElementsByName('hosted_on_github');
+    const hostedOnGitHub = document.getElementById('hosted_on_github');
     const githubFields = document.getElementById('github-fields');
     const downloadUrlField = document.getElementById('download-url-field');
     const githubUsernameField = document.getElementById('github_username');
     const githubRepoField = document.getElementById('github_repo');
-    const landingPageField = document.getElementById('landing-page-field');
+    const landingPageContent = document.getElementById('landing_page_content');
     const markdownFileNameField = document.getElementById('markdown-file-name-field');
     const markdownFileUploadField = document.getElementById('upload-markdown-field');
-    const landingPageRadios = document.getElementsByName('landing_page_content');
-    const markdownFields = document.getElementById('markdown-fields');
-    const importFromGithubRadio = document.querySelector('input[value="import_from_github"]');
-    const uploadMarkdownRadio = document.querySelector('input[value="upload_markdown"]');
+    const importOption = landingPageContent.querySelector('option[value="import_from_github"]');
 
+    // Toggle fields based on Hosted on GitHub
     function toggleGitHubFields() {
-    const isHostedOnGitHub = document.getElementById('hosted_on_github').value === 'yes';
+        const isHostedOnGitHub = hostedOnGitHub.value === 'yes';
 
-    if (isHostedOnGitHub) {
-        githubFields.style.display = 'flex';
-        downloadUrlField.style.display = 'none';
-        githubUsernameField.setAttribute('required', 'required');
-        githubRepoField.setAttribute('required', 'required');
-        document.getElementById('download_url').removeAttribute('required');
-        markdownFields.style.display = 'block';
+        // Toggle GitHub fields
+        githubFields.style.display = isHostedOnGitHub ? 'flex' : 'none';
+        githubUsernameField.required = isHostedOnGitHub;
+        githubRepoField.required = isHostedOnGitHub;
 
-        // Show the "import_from_github" option and ensure it's selectable
-        importFromGithubRadio.parentElement.style.display = 'flex';
-    } else {
-        githubFields.style.display = 'none';
-        downloadUrlField.style.display = 'block';
-        githubUsernameField.removeAttribute('required');
-        githubRepoField.removeAttribute('required');
-        document.getElementById('download_url').setAttribute('required', 'required');
-        markdownFields.style.display = 'block';
+        // Toggle Download URL field
+        downloadUrlField.style.display = isHostedOnGitHub ? 'none' : 'block';
+        document.getElementById('download_url').required = !isHostedOnGitHub;
 
-        // Hide "import_from_github" option and auto-select "upload_markdown"
-        importFromGithubRadio.parentElement.style.display = 'none';
-        uploadMarkdownRadio.checked = true;
-
-        // Update the fields based on the new selection
-        toggleMarkdownFields();
+        // Show or hide the "import_from_github" option
+        importOption.style.display = isHostedOnGitHub ? 'block' : 'none';
+        if (!isHostedOnGitHub && landingPageContent.value === 'import_from_github') {
+            landingPageContent.value = 'upload_markdown';
+        }
     }
-}
 
-// Attach event listener to the select dropdown
-document.getElementById('hosted_on_github').addEventListener('change', () => {
-    toggleGitHubFields();
-    toggleMarkdownFields(); // Ensure fields update properly
-});
-
-
+    // Toggle fields based on Landing Page Content
     function toggleMarkdownFields() {
-        const selectedValue = document.querySelector('input[name="landing_page_content"]:checked').value;
+        const selectedValue = landingPageContent.value;
 
-        // Show or hide the relevant fields
+        // Show or hide fields based on the selected value
         markdownFileNameField.style.display = selectedValue === 'import_from_github' ? 'block' : 'none';
         markdownFileUploadField.style.display = selectedValue === 'upload_markdown' ? 'block' : 'none';
     }
 
+    // Initialize fields on page load
     function initializeFields() {
-        // Ensure the default state is set up correctly on page load
         toggleGitHubFields();
-
-        // Explicitly call toggleMarkdownFields to handle the selected value
         toggleMarkdownFields();
     }
 
     // Add event listeners
-    hostedRadioButtons.forEach(button => {
-        button.addEventListener('change', () => {
-            toggleGitHubFields();
-            toggleMarkdownFields(); // Ensure fields update properly
-        });
+    hostedOnGitHub.addEventListener('change', () => {
+        toggleGitHubFields();
+        toggleMarkdownFields();
     });
 
-    landingPageRadios.forEach(button => {
-        button.addEventListener('change', toggleMarkdownFields);
-    });
+    landingPageContent.addEventListener('change', toggleMarkdownFields);
 
-    // Initialize fields on page load
+    // Run initialization
     initializeFields();
 });
+
 
 
 
