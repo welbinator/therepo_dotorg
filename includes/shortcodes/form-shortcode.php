@@ -23,121 +23,115 @@ function handle_plugin_repo_submission() {
     $download_url = esc_url_raw($_POST['download_url']);
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : array();
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', $_POST['tags']) : array();
-    $post_content = '';
-
+    $post_content = 'Add your plugin/theme information here!';
 
     // General field validation
     if (empty($type) || empty($name)) {
         wp_die('Error: All fields are required.');
     }
 
-    // Conditional validation based on "Hosted on GitHub?"
-    if ($hosted_on_github === 'yes') {
-        if (empty($github_username) || empty($github_repo)) {
-            wp_die('Error: GitHub Username and Repository are required when hosted on GitHub.');
-        }
+    // Define allowed HTML tags and attributes for sanitization
+    $allowed_html = [
+        'img' => [
+            'src' => [],
+            'alt' => [],
+        ],
+        'p' => [],
+        'a' => [
+            'href' => [],
+        ],
+        'ul' => [],
+        'ol' => [],
+        'li' => [],
+        'strong' => [],
+        'em' => [],
+        'h1' => [],
+        'h2' => [],
+        'h3' => [],
+        'h4' => [],
+        'h5' => [],
+        'h6' => [],
+        'blockquote' => [],
+        'code' => [],
+        'pre' => [],
+        'br' => [],
+        'hr' => [],
+    ];
 
-        // Define allowed HTML tags and attributes for sanitization
-        $allowed_html = [
-            'img' => [
-                'src' => [],
-                'alt' => [],
-            ],
-            'p' => [],
-            'a' => [
-                'href' => [],
-            ],
-            'ul' => [],
-            'ol' => [],
-            'li' => [],
-            'strong' => [],
-            'em' => [],
-            'h1' => [],
-            'h2' => [],
-            'h3' => [],
-            'h4' => [],
-            'h5' => [],
-            'h6' => [],
-            'blockquote' => [],
-            'code' => [],
-            'pre' => [],
-            'br' => [],
-            'hr' => [],
-        ];
+    // Handle "Import Markdown file from GitHub"
+    if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
+        if (!empty($markdown_file_name)) {
+            $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/main/" . urlencode($markdown_file_name);
+            $response = wp_remote_get($readme_url);
 
-        // Handle "Import Markdown file from GitHub" and "Upload Markdown file" options
-if ($landing_page_content === 'import_from_github') {
-    if (!empty($markdown_file_name)) {
-        $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/main/" . urlencode($markdown_file_name);
-        $response = wp_remote_get($readme_url);
+            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                $markdown = wp_remote_retrieve_body($response);
 
-        if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-            $markdown = wp_remote_retrieve_body($response);
-
-            if (!empty($markdown)) {
-                $parsedown = new \Parsedown();
-                $post_content = $parsedown->text($markdown);
-
-                // Ensure content is safe for WordPress
-                $post_content = wp_kses_post(wp_slash($post_content));
-            } else {
-                wp_die('Error: Could not fetch the specified Markdown file from GitHub.');
-            }
-        } else {
-            wp_die('Error: Unable to retrieve the specified Markdown file from GitHub.');
-        }
-    } else {
-        wp_die('Error: Please specify the Markdown file name.');
-    }
-} elseif ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
-    
-    if (!empty($_FILES['markdown_file']['name'])) {
-        $uploaded_file = $_FILES['markdown_file'];
-
-        // Check for errors during upload
-        if ($uploaded_file['error'] === UPLOAD_ERR_OK) {
-            $file_tmp_path = $uploaded_file['tmp_name'];
-            $file_name = $uploaded_file['name'];
-            $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            $allowed_extensions = ['md', 'html', 'htm'];
-
-            // Validate file type based on extension
-            if (in_array($file_extension, $allowed_extensions, true)) {
-                // Read the file content
-                $file_content = file_get_contents($file_tmp_path);
-
-                // Check if content is not empty
-                if (!empty($file_content)) {
-                    // Process content based on file type
-                    if ($file_extension === 'md') {
-                        $parsedown = new \Parsedown();
-                        $post_content = $parsedown->text($file_content);
-                    } else {
-                        $post_content = wp_kses_post($file_content);
-                    }
+                if (!empty($markdown)) {
+                    $parsedown = new \Parsedown();
+                    $post_content = $parsedown->text($markdown);
+                    $post_content = wp_kses_post(wp_slash($post_content));
                 } else {
-                    wp_die('Error: The uploaded file is empty.');
+                    wp_die('Error: Could not fetch the specified Markdown file from GitHub.');
                 }
             } else {
-                wp_die('Error: Unsupported file type. Please upload a Markdown (.md), HTML (.html), or HTM (.htm) file.');
+                wp_die('Error: Unable to retrieve the specified Markdown file from GitHub.');
             }
         } else {
-            wp_die('Error: File upload failed. Please try again.');
+            wp_die('Error: Please specify the Markdown file name.');
         }
-    } else {
-        wp_die('Error: No file was uploaded.');
     }
-}
 
+    // Handle "Upload Markdown file"
+    if ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
+        if (!empty($_FILES['markdown_file']['name'])) {
+            $uploaded_file = $_FILES['markdown_file'];
 
-  
-        $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
-    } else {
+            if ($uploaded_file['error'] === UPLOAD_ERR_OK) {
+                $file_tmp_path = $uploaded_file['tmp_name'];
+                $file_name = $uploaded_file['name'];
+                $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                $allowed_extensions = ['md', 'html', 'htm'];
+
+                if (in_array($file_extension, $allowed_extensions, true)) {
+                    $file_content = file_get_contents($file_tmp_path);
+
+                    if (!empty($file_content)) {
+                        if ($file_extension === 'md') {
+                            $parsedown = new \Parsedown();
+                            $post_content = $parsedown->text($file_content);
+                        } else {
+                            $post_content = wp_kses($file_content, $allowed_html);
+                        }
+
+                        $post_content = wp_kses_post(wp_slash($post_content));
+                    } else {
+                        wp_die('Error: The uploaded file is empty.');
+                    }
+                } else {
+                    wp_die('Error: Unsupported file type. Please upload a Markdown (.md), HTML (.html), or HTM (.htm) file.');
+                }
+            } else {
+                wp_die('Error: File upload failed. Please try again.');
+            }
+        } else {
+            wp_die('Error: No file was uploaded.');
+        }
+    }
+
+    // Handle "Not hosted on GitHub" and fallback
+    if ($hosted_on_github === 'no') {
+        if (empty($post_content)) {
+            wp_die('Error: You must upload a valid file to populate the post content.');
+        }
+
         if (empty($download_url)) {
             wp_die('Error: Download URL is required when not hosted on GitHub.');
         }
+
         $latest_release_url = $download_url;
-        
+    } else {
+        $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
     }
 
     // Handle file upload for featured image
@@ -188,9 +182,9 @@ if ($landing_page_content === 'import_from_github') {
     ));
 
     if ($post_id) {
-        // Save meta fields
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
         update_post_meta($post_id, 'hosted_on_github', $hosted_on_github);
+
         if ($hosted_on_github === 'yes') {
             update_post_meta($post_id, 'github_username', $github_username);
             update_post_meta($post_id, 'github_repo', $github_repo);
@@ -198,27 +192,17 @@ if ($landing_page_content === 'import_from_github') {
             update_post_meta($post_id, 'download_url', $download_url);
         }
 
-        // Assign categories to the post
-        if (!empty($categories)) {
-            wp_set_object_terms($post_id, $categories, $taxonomy);
-        }
+        wp_set_object_terms($post_id, $categories, $taxonomy);
+        wp_set_object_terms($post_id, $tags, $tags_taxonomy);
 
-        // Assign tags to the post
-        if (!empty($tags)) {
-            wp_set_object_terms($post_id, $tags, $tags_taxonomy);
-        }
-
-        // Save cover image URL
         if ($cover_image_url) {
             update_post_meta($post_id, 'cover_image_url', $cover_image_url);
         }
 
-        // Set the featured image
         if ($featured_image_id) {
             set_post_thumbnail($post_id, $featured_image_id);
         }
 
-        // Redirect after success
         wp_redirect(add_query_arg('submission', 'success', home_url()));
         exit;
     } else {
@@ -226,9 +210,8 @@ if ($landing_page_content === 'import_from_github') {
     }
 }
 
-
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
-add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission'); // For non-logged-in users
+add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 
 
 // Form shortcode
@@ -431,67 +414,83 @@ function plugin_repo_submission_form_shortcode() {
 
     // Toggle Fields Based on Hosted on GitHub
     document.addEventListener('DOMContentLoaded', function () {
-        const hostedRadioButtons = document.getElementsByName('hosted_on_github');
-        const githubFields = document.getElementById('github-fields');
-        const downloadUrlField = document.getElementById('download-url-field');
-        const githubUsernameField = document.getElementById('github_username');
-        const githubRepoField = document.getElementById('github_repo');
-        const landingPageField = document.getElementById('landing-page-field');
-        const markdownFileNameField = document.getElementById('markdown-file-name-field');
-        const markdownFileUploadField = document.getElementById('upload-markdown-field');
-        const landingPageRadios = document.getElementsByName('landing_page_content');
-        const markdownFields = document.getElementById('markdown-fields');
+    const hostedRadioButtons = document.getElementsByName('hosted_on_github');
+    const githubFields = document.getElementById('github-fields');
+    const downloadUrlField = document.getElementById('download-url-field');
+    const githubUsernameField = document.getElementById('github_username');
+    const githubRepoField = document.getElementById('github_repo');
+    const landingPageField = document.getElementById('landing-page-field');
+    const markdownFileNameField = document.getElementById('markdown-file-name-field');
+    const markdownFileUploadField = document.getElementById('upload-markdown-field');
+    const landingPageRadios = document.getElementsByName('landing_page_content');
+    const markdownFields = document.getElementById('markdown-fields');
+    const importFromGithubRadio = document.querySelector('input[value="import_from_github"]');
+    const uploadMarkdownRadio = document.querySelector('input[value="upload_markdown"]');
 
-        function toggleGitHubFields() {
+    function toggleGitHubFields() {
         const isHostedOnGitHub = document.querySelector('input[name="hosted_on_github"]:checked').value === 'yes';
-        
 
         if (isHostedOnGitHub) {
             githubFields.style.display = 'flex';
             downloadUrlField.style.display = 'none';
-            // landingPageField.style.display = 'block';
             githubUsernameField.setAttribute('required', 'required');
             githubRepoField.setAttribute('required', 'required');
             document.getElementById('download_url').removeAttribute('required');
             markdownFields.style.display = 'block';
+
+            // Show the "import_from_github" option and ensure it's selectable
+            importFromGithubRadio.parentElement.style.display = 'flex';
         } else {
             githubFields.style.display = 'none';
             downloadUrlField.style.display = 'block';
-            // landingPageField.style.display = 'none';
             githubUsernameField.removeAttribute('required');
             githubRepoField.removeAttribute('required');
             document.getElementById('download_url').setAttribute('required', 'required');
-            markdownFields.style.display = 'none';
-        }
+            markdownFields.style.display = 'block';
 
+            // Hide "import_from_github" option and auto-select "upload_markdown"
+            importFromGithubRadio.parentElement.style.display = 'none';
+            uploadMarkdownRadio.checked = true;
+
+            // Update the fields based on the new selection
+            toggleMarkdownFields();
+        }
     }
 
     function toggleMarkdownFields() {
-    const selectedValue = document.querySelector('input[name="landing_page_content"]:checked').value;
+        const selectedValue = document.querySelector('input[name="landing_page_content"]:checked').value;
 
-    // Toggle the Markdown filename field
-    markdownFileNameField.style.display = selectedValue === 'import_from_github' ? 'block' : 'none';
+        // Show or hide the relevant fields
+        markdownFileNameField.style.display = selectedValue === 'import_from_github' ? 'block' : 'none';
+        markdownFileUploadField.style.display = selectedValue === 'upload_markdown' ? 'block' : 'none';
+    }
 
-    // Toggle the Markdown file upload field
-    markdownFileUploadField.style.display = selectedValue === 'upload_markdown' ? 'block' : 'none';
-}
-
-
-    
-        // Add event listeners
-        hostedRadioButtons.forEach(button => {
-            button.addEventListener('change', toggleGitHubFields);
-        });
-        landingPageRadios.forEach(button => {
-            button.addEventListener('change', toggleMarkdownFields);
-        });
-
-        // Initialize fields
+    function initializeFields() {
+        // Ensure the default state is set up correctly on page load
         toggleGitHubFields();
-        toggleMarkdownFields();
 
-      
+        // Explicitly call toggleMarkdownFields to handle the selected value
+        toggleMarkdownFields();
+    }
+
+    // Add event listeners
+    hostedRadioButtons.forEach(button => {
+        button.addEventListener('change', () => {
+            toggleGitHubFields();
+            toggleMarkdownFields(); // Ensure fields update properly
+        });
     });
+
+    landingPageRadios.forEach(button => {
+        button.addEventListener('change', toggleMarkdownFields);
+    });
+
+    // Initialize fields on page load
+    initializeFields();
+});
+
+
+
 </script>
 
 
