@@ -284,11 +284,11 @@ function plugin_repo_submission_form_shortcode() {
                         <div class="mt-1 space-y-2">
                             <label class="flex items-center">
                                 <input type="radio" name="landing_page_content" value="import_from_github" checked>
-                                <span class="ml-2">Import markdown file from GitHub</span>
+                                <span class="ml-2">Import markdown/txt file from GitHub</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="landing_page_content" value="upload_markdown">
-                                <span class="ml-2">Upload markdown file</span>
+                                <span class="ml-2">Upload markdown/html/txt file</span>
                             </label>
                             <label class="flex items-center">
                                 <input type="radio" name="landing_page_content" value="manual_edit">
