@@ -277,15 +277,11 @@ function plugin_repo_submission_form_shortcode() {
 
                     <!-- Hosted on GitHub? -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Hosted on GitHub?</label>
-                        <div class="mt-1">
-                            <label>
-                                <input type="radio" name="hosted_on_github" value="yes" checked> Yes
-                            </label>
-                            <label class="ml-4">
-                                <input type="radio" name="hosted_on_github" value="no"> No
-                            </label>
-                        </div>
+                        <label for="hosted_on_github" class="block text-sm font-medium text-gray-700">Hosted on GitHub?</label>
+                        <select name="hosted_on_github" id="hosted_on_github" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
                     </div>
 
                     <!-- GitHub Username and Repo -->
@@ -454,34 +450,41 @@ function plugin_repo_submission_form_shortcode() {
     const uploadMarkdownRadio = document.querySelector('input[value="upload_markdown"]');
 
     function toggleGitHubFields() {
-        const isHostedOnGitHub = document.querySelector('input[name="hosted_on_github"]:checked').value === 'yes';
+    const isHostedOnGitHub = document.getElementById('hosted_on_github').value === 'yes';
 
-        if (isHostedOnGitHub) {
-            githubFields.style.display = 'flex';
-            downloadUrlField.style.display = 'none';
-            githubUsernameField.setAttribute('required', 'required');
-            githubRepoField.setAttribute('required', 'required');
-            document.getElementById('download_url').removeAttribute('required');
-            markdownFields.style.display = 'block';
+    if (isHostedOnGitHub) {
+        githubFields.style.display = 'flex';
+        downloadUrlField.style.display = 'none';
+        githubUsernameField.setAttribute('required', 'required');
+        githubRepoField.setAttribute('required', 'required');
+        document.getElementById('download_url').removeAttribute('required');
+        markdownFields.style.display = 'block';
 
-            // Show the "import_from_github" option and ensure it's selectable
-            importFromGithubRadio.parentElement.style.display = 'flex';
-        } else {
-            githubFields.style.display = 'none';
-            downloadUrlField.style.display = 'block';
-            githubUsernameField.removeAttribute('required');
-            githubRepoField.removeAttribute('required');
-            document.getElementById('download_url').setAttribute('required', 'required');
-            markdownFields.style.display = 'block';
+        // Show the "import_from_github" option and ensure it's selectable
+        importFromGithubRadio.parentElement.style.display = 'flex';
+    } else {
+        githubFields.style.display = 'none';
+        downloadUrlField.style.display = 'block';
+        githubUsernameField.removeAttribute('required');
+        githubRepoField.removeAttribute('required');
+        document.getElementById('download_url').setAttribute('required', 'required');
+        markdownFields.style.display = 'block';
 
-            // Hide "import_from_github" option and auto-select "upload_markdown"
-            importFromGithubRadio.parentElement.style.display = 'none';
-            uploadMarkdownRadio.checked = true;
+        // Hide "import_from_github" option and auto-select "upload_markdown"
+        importFromGithubRadio.parentElement.style.display = 'none';
+        uploadMarkdownRadio.checked = true;
 
-            // Update the fields based on the new selection
-            toggleMarkdownFields();
-        }
+        // Update the fields based on the new selection
+        toggleMarkdownFields();
     }
+}
+
+// Attach event listener to the select dropdown
+document.getElementById('hosted_on_github').addEventListener('change', () => {
+    toggleGitHubFields();
+    toggleMarkdownFields(); // Ensure fields update properly
+});
+
 
     function toggleMarkdownFields() {
         const selectedValue = document.querySelector('input[name="landing_page_content"]:checked').value;
