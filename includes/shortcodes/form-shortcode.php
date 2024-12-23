@@ -61,25 +61,51 @@ function handle_plugin_repo_submission() {
     // Handle "Import Markdown file from GitHub"
     if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
         if (!empty($markdown_file_name)) {
-            $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/main/" . urlencode($markdown_file_name);
-            $response = wp_remote_get($readme_url);
-
+            // Fetch repository details to determine the default branch
+            $repo_api_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo);
+            $repo_info = wp_remote_get($repo_api_url, [
+                'headers' => [
+                    'User-Agent' => 'TheRepo-Plugin',
+                ],
+            ]);
+        
+            if (!is_wp_error($repo_info) && wp_remote_retrieve_response_code($repo_info) === 200) {
+                $repo_data = json_decode(wp_remote_retrieve_body($repo_info), true);
+                $default_branch = $repo_data['default_branch'] ?? 'main'; // Use 'main' as a fallback
+            } else {
+                error_log('GitHub API Error: ' . print_r($repo_info, true)); // Log error for debugging
+                wp_die('Error: Unable to fetch the repository information from GitHub.');
+            }
+        
+            // Construct the URL for the Markdown file
+            $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
+        
+            // Fetch the Markdown file
+            $response = wp_remote_get($readme_url, [
+                'headers' => [
+                    'User-Agent' => 'TheRepo-Plugin',
+                ],
+            ]);
+        
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
                 $markdown = wp_remote_retrieve_body($response);
-
+        
                 if (!empty($markdown)) {
                     $parsedown = new \Parsedown();
                     $post_content = $parsedown->text($markdown);
                     $post_content = wp_kses_post(wp_slash($post_content));
                 } else {
+                    error_log('Markdown File Error: File content is empty. URL: ' . $readme_url);
                     wp_die('Error: Could not fetch the specified Markdown file from GitHub.');
                 }
             } else {
+                error_log('Markdown Fetch Error: ' . print_r($response, true) . ' URL: ' . $readme_url);
                 wp_die('Error: Unable to retrieve the specified Markdown file from GitHub.');
             }
         } else {
             wp_die('Error: Please specify the Markdown file name.');
         }
+        
     }
 
     // Handle "Upload Markdown file"
