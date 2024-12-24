@@ -485,8 +485,6 @@ function plugin_repo_submission_form_shortcode() {
 });
 
 
-
-
 </script>
 
 

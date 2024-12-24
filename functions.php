@@ -81,16 +81,20 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
         'headers' => [
             'Accept' => 'application/vnd.github.v3+json',
             'User-Agent' => 'WordPress GitHub Fetcher',
+            'Authorization' => 'Bearer ' . getenv('GITHUB_TOKEN'),
         ],
     ]);
-
+    
     if (is_wp_error($response)) {
         error_log('GitHub API Error: ' . $response->get_error_message());
         return null;
     }
-
+    
     $data = json_decode(wp_remote_retrieve_body($response), true);
-
+    
+    // Log the API response for debugging
+    error_log('GitHub API Response: ' . print_r($data, true));
+    
     if (!empty($data)) {
         set_transient($cache_key, $data, $expiration);
     }
@@ -139,23 +143,42 @@ add_shortcode('latest_release_date', __NAMESPACE__ . '\\fetch_latest_release_dat
 
 function fetch_latest_release_download_count($atts) {
     $post_id = get_the_ID();
-    $github_url = get_post_meta($post_id, 'latest_release_url', true);
 
-    if (empty($github_url)) {
-        return '<p>No GitHub URL provided.</p>';
+    // Retrieve owner and repo directly from meta
+    $github_owner = get_post_meta($post_id, 'github_username', true);
+    $github_repo = get_post_meta($post_id, 'github_repo', true);
+
+    if (empty($github_owner) || empty($github_repo)) {
+        error_log('GitHub owner or repo is missing.');
+        return '<p>No GitHub owner or repository provided.</p>';
     }
 
-    $cache_key = 'latest_release_downloads_' . md5($github_url);
-    $data = fetch_github_data($github_url, $cache_key);
+    
+    // Construct API URL
+    $api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}/releases";
+   
 
-    if (isset($data['assets']) && is_array($data['assets'])) {
-        $total_downloads = array_reduce($data['assets'], function ($carry, $item) {
-            return $carry + ($item['download_count'] ?? 0);
-        }, 0);
+    // Fetch data
+    $cache_key = 'all_releases_downloads_' . md5($api_url);
+    $data = fetch_github_data($api_url, $cache_key);
+
+    if (is_array($data)) {
+        $total_downloads = 0;
+
+        foreach ($data as $release) {
+            if (isset($release['assets']) && is_array($release['assets'])) {
+                $release_downloads = array_reduce($release['assets'], function ($carry, $item) {
+                    return $carry + ($item['download_count'] ?? 0);
+                }, 0);
+
+                $total_downloads += $release_downloads;
+            }
+        }
 
         return '<p>' . esc_html(number_format($total_downloads)) . '</p>';
     }
 
     return '<p>No download information available.</p>';
 }
-add_shortcode('latest_release_downloads', __NAMESPACE__ . '\\fetch_latest_release_download_count');
+
+add_shortcode('number_of_downloads', __NAMESPACE__ . '\\fetch_latest_release_download_count');
