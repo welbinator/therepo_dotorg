@@ -81,7 +81,7 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
         'headers' => [
             'Accept' => 'application/vnd.github.v3+json',
             'User-Agent' => 'WordPress GitHub Fetcher',
-            // 'Authorization' => 'Bearer ' . getenv('GITHUB_TOKEN'),
+            'Authorization' => 'Bearer ' . getenv('GITHUB_TOKEN'),
         ],
     ]);
     
