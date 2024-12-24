@@ -2,6 +2,15 @@
 
 namespace TheRepo\Functions;
 
+// use Dotenv\Dotenv;
+
+// require __DIR__ . '/vendor/autoload.php';
+// $dotenv = Dotenv::createImmutable(__DIR__);
+// $dotenv->load();
+
+// $token = getenv('GITHUB_TOKEN');
+// error_log('Loaded Token: ' . $token);
+
 function allow_subscribers_to_edit_own_posts() {
     $subscriber_role = get_role('subscriber');
     if ($subscriber_role) {
@@ -72,7 +81,20 @@ add_action('admin_init', function () {
 });
 
 function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
+   
+   // delete after testing
+    delete_transient($cache_key);
+    error_log('Transient cleared for testing.');
     $cached_data = get_transient($cache_key);
+
+    error_log('Cached Data: ' . print_r($cached_data, true));
+    if (!empty($data)) {
+        set_transient($cache_key, $data, $expiration);
+        error_log('New data cached: ' . print_r($data, true));
+    } else {
+        error_log('No data to cache.');
+    }
+    // end delete after testing
     if ($cached_data !== false) {
         return $cached_data;
     }
@@ -99,7 +121,8 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     
     // Log the API response for debugging
     error_log('GitHub API Response: ' . print_r($data, true));
-    
+    error_log('Transient Expiration: ' . $expiration);
+
     if (!empty($data)) {
         set_transient($cache_key, $data, $expiration);
     }
