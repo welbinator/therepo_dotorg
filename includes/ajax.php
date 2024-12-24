@@ -23,7 +23,7 @@ function filter_plugins() {
     if ($category) {
         $args['tax_query'] = [
             [
-                'taxonomy' => $type === 'plugin_repo' ? 'plugin-category' : 'theme-category',
+                'taxonomy' => $type === 'theme_repo' ? 'theme-category' : 'plugin-category',
                 'field'    => 'slug',
                 'terms'    => $category,
             ],
@@ -85,7 +85,11 @@ function filter_plugins() {
                         <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="!rounded-md !object-cover">
                         <div class="!flex-grow">
                             <div class="!flex !justify-between !items-start">
-                                <h3 class="!text-xl !font-semibold"><?php the_title(); ?></h3>
+                                <h3 class="!text-xl !font-semibold">
+                                    <a href="<?php the_permalink(); ?>" class="!text-xl !font-semibold !text-blue-500 hover:!underline">
+                                        <?php the_title(); ?>
+                                    </a>
+                                </h3>
                                 <span class="!px-2 !py-1 !text-xs !font-semibold !rounded <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
                                     <?php echo esc_html($post_type); ?>
                                 </span>
@@ -130,7 +134,6 @@ function filter_plugins() {
 
     wp_die();
 }
-
 
 add_action('wp_ajax_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
 add_action('wp_ajax_nopriv_filter_plugins', __NAMESPACE__ . '\\filter_plugins');
