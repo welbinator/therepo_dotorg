@@ -6,82 +6,46 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    if (grid) {
-        
-        grid.addEventListener('click', function (event) {
-           
-            // Prevent event bubbling
-            event.stopImmediatePropagation();
-            event.stopPropagation();
-        
-            // Look for the <a> element inside the .github-download-button wrapper
-            const button = event.target.closest('.github-download-button a');
-        
-            // Exit if no button was clicked
-            if (!button) {
-                return;
-            }
-        
-           
-        
-            const apiUrl = button.id;
-        
-            // Check if the API URL starts with GitHub's API prefix
-            if (apiUrl.startsWith('https://api.github.com/repos')) {
-                event.preventDefault(); // Prevent the default link behavior
-               
-        
-                // Fetch the latest release details from GitHub
-                fetch(apiUrl, {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'GitHub-Latest-Release-Fetcher',
-                    },
+    grid.addEventListener('click', function (event) {
+        event.stopPropagation();
+
+        const button = event.target.closest('.github-download-button a');
+        if (!button) return;
+
+        const apiUrl = button.id;
+
+        if (apiUrl.startsWith('https://api.github.com/repos')) {
+            event.preventDefault();
+
+            fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'GitHub-Latest-Release-Fetcher',
+                },
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Network error: ${response.statusText}`);
+                    }
+                    return response.json();
                 })
-                    .then((response) => {
-                       
-                        if (!response.ok) {
-                            throw new Error(
-                                'Network response was not ok: ' + response.statusText
-                            );
-                        }
-                        return response.json();
-                    })
-                    .then((data) => {
-                       
-                        if (data && data.assets && data.assets.length > 0) {
-                            // Get the first asset's download URL
-                            const downloadUrl = data.assets[0].browser_download_url;
-        
-                            
-        
-                            // Trigger the download
-                            window.location.href = downloadUrl;
-                        } else {
-                            alert(
-                                'No downloadable assets found in the latest release.'
-                            );
-                            console.error(
-                                'Debug: No assets available in the release data.'
-                            );
-                        }
-                    })
-                    .catch((error) => {
-                        console.error('Debug: Error fetching release data:', error);
-                        alert(
-                            'Failed to fetch release information. Please try again later.'
-                        );
-                    });
-            } else {
-                console.log('Debug: Invalid API URL detected:', apiUrl);
-                // If the URL is not a GitHub API URL, update the href and let it function normally
-                button.setAttribute('href', apiUrl);
-            }
-            
-        });
-       
-        
-    }
+                .then((data) => {
+                    if (data?.assets?.length > 0) {
+                        const downloadUrl = data.assets[0].browser_download_url;
+                        window.location.href = downloadUrl;
+                    } else {
+                        alert('No downloadable assets found in the latest release.');
+                        console.error('Debug: No assets available in the release data.');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Debug: Error fetching release data:', error);
+                    alert('Failed to fetch release information. Please try again later.');
+                });
+        } else {
+            console.log('Debug: Invalid API URL detected:', apiUrl);
+        }
+    });
 
     // Suggestions and categories functionality
     const categoriesInput = document.getElementById('categories');
@@ -184,7 +148,12 @@ document.addEventListener('DOMContentLoaded', function () {
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     grid.innerHTML = xhr.responseText;
+                } else {
+                    grid.innerHTML = '<p class="!text-gray-600">Error loading results.</p>';
                 }
+            };
+            xhr.onerror = function () {
+                grid.innerHTML = '<p class="!text-gray-600">Error loading results.</p>';
             };
             xhr.send();
         }
@@ -194,11 +163,11 @@ document.addEventListener('DOMContentLoaded', function () {
         categoryFilter.addEventListener('change', updateGrid);
     }
 
+    // Form toggle functionality
     const hostedOnGitHubRadios = document.querySelectorAll('input[name="hosted_on_github"]');
     const githubFields = document.getElementById('github-fields');
     const downloadUrlField = document.getElementById('download-url-field');
 
-    // Function to toggle fields
     function toggleFields() {
         const selectedValue = document.querySelector('input[name="hosted_on_github"]:checked').value;
 
@@ -217,11 +186,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Attach change event listeners to radio buttons
     hostedOnGitHubRadios.forEach(function (radio) {
         radio.addEventListener('change', toggleFields);
     });
 
-    // Set initial state based on the default or pre-selected radio button
     toggleFields();
 });

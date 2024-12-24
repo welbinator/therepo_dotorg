@@ -16,7 +16,7 @@ function user_submissions_shortcode() {
             <div id="account-page-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php
                 $query = new \WP_Query([
-                    'post_type' => ['plugin', 'theme_repo'],
+                    'post_type' => ['plugin_repo', 'theme_repo'],
                     'posts_per_page' => -1,
                     'post_status' => ['publish', 'pending'], // Include pending posts
                     'author' => $current_user_id, // Filter by logged-in user
@@ -24,7 +24,7 @@ function user_submissions_shortcode() {
 
                 if ($query->have_posts()) :
                     while ($query->have_posts()) : $query->the_post();
-                        $post_type = get_post_type() === 'plugin' ? 'Plugin' : 'Theme';
+                        $post_type = get_post_type() === 'plugin_repo' ? 'Plugin' : 'Theme';
                         $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
                         $category_names = $categories ? wp_list_pluck($categories, 'name') : [];
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60';
