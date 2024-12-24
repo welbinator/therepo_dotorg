@@ -50,6 +50,8 @@ function plugin_repo_grid_shortcode() {
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60'; // Fallback thumbnail image
                         $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
                         $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true);
+                        $tags = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-tag' : 'theme-tag');
+                        $tag_names = $tags && !is_wp_error($tags) ? wp_list_pluck($tags, 'name') : [];
                         ?>
                         <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
                             <div class="!p-6 !pb-12">
@@ -70,15 +72,26 @@ function plugin_repo_grid_shortcode() {
                                 </div>
                                 <p class="!text-gray-600 !mb-4"><?php echo esc_html(wp_trim_words(get_the_content(), 20)); ?></p>
                                 <div class="!flex flex-wrap !justify-between !items-center github-download-button">
-                                    <div class="!flex space-x-2 gap-3 !mb-5">
-                                        <?php if (!empty($category_names)) : ?>
-                                            <?php foreach ($category_names as $category_name) : ?>
-                                                <span class="!px-2 !py-1 !bg-gray-100 !text-gray-600 !text-xs !rounded-full !whitespace-nowrap">
-                                                    <?php echo esc_html($category_name); ?>
-                                                </span>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </div>
+                                <div class="!flex !space-x-2 !gap-3 !mb-5 flex-col">
+                            <div>
+                                <?php if (!empty($category_names)) : ?>
+                                    <?php foreach ($category_names as $category_name) : ?>
+                                        <span class="!px-2 !py-1 !bg-gray-100 !text-gray-600 !text-xs !rounded-full !whitespace-nowrap">
+                                            <?php echo esc_html($category_name); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                            <div>
+                                <?php if (!empty($tag_names)) : ?>
+                                    <?php foreach ($tag_names as $tag_name) : ?>
+                                        <span class="!px-2 !py-1 !bg-blue-100 !text-blue-600 !text-xs !rounded-full !whitespace-nowrap">
+                                            <?php echo esc_html($tag_name); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                                     <a href="#" target="_blank" id="<?php echo esc_attr($latest_release_url); ?>" class="!bg-blue-500 !hover:bg-blue-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
                                         Download
                                     </a>
