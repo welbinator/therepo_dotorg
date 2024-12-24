@@ -194,9 +194,9 @@ function handle_plugin_repo_submission() {
     }
 
     // Determine post type and taxonomy
-    $post_type = $type === 'plugin' ? 'plugin' : 'theme_repo';
-    $taxonomy = $type === 'plugin' ? 'plugin-category' : 'theme-category';
-    $tags_taxonomy = $type === 'plugin' ? 'plugin-tag' : 'theme-tag';
+    $post_type = $type === 'plugin_repo' ? 'plugin_repo' : 'theme_repo';
+    $taxonomy = $type === 'plugin_repo' ? 'plugin-category' : 'theme-category';
+    $tags_taxonomy = $type === 'plugin_repo' ? 'plugin-tag' : 'theme-tag';
 
     // Create the post
     $post_id = wp_insert_post(array(
@@ -257,7 +257,7 @@ function plugin_repo_submission_form_shortcode() {
                     <div>
                         <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
                         <select name="type" id="type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="plugin">Plugin</option>
+                            <option value="plugin_repo">Plugin</option>
                             <option value="theme">Theme</option>
                         </select>
                     </div>
@@ -424,7 +424,7 @@ function plugin_repo_submission_form_shortcode() {
     document.getElementById('type').addEventListener('change', function () {
         const type = this.value;
         const nameLabel = document.querySelector('label[for="name"]');
-        nameLabel.textContent = type === 'plugin' ? 'Plugin Name' : 'Theme Name';
+        nameLabel.textContent = type === 'plugin_repo' ? 'Plugin Name' : 'Theme Name';
     });
 
     // Toggle Fields Based on Hosted on GitHub

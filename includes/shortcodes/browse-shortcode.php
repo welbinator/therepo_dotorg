@@ -20,7 +20,7 @@ function plugin_repo_grid_shortcode() {
                 <div class="!flex !items-center !space-x-4">
                     <select id="plugin-repo-type-filter" class="">
                         <option value="">All Types</option>
-                        <option value="plugin">Plugins</option>
+                        <option value="plugin_repo">Plugins</option>
                         <option value="theme_repo">Themes</option>
                     </select>
                     <select id="plugin-repo-category-filter" class="">
@@ -39,12 +39,12 @@ function plugin_repo_grid_shortcode() {
                 <?php
                 // Default query: display all plugins and themes
                 $query = new \WP_Query(array(
-                    'post_type' => array('plugin', 'theme_repo'),
+                    'post_type' => array('plugin_repo', 'theme_repo'),
                     'posts_per_page' => -1,
                 ));
                 if ($query->have_posts()) :
                     while ($query->have_posts()) : $query->the_post();
-                        $post_type = get_post_type() === 'plugin' ? 'Plugin' : 'Theme';
+                        $post_type = get_post_type() === 'plugin_repo' ? 'Plugin' : 'Theme';
                         $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
                         $category_names = $categories ? wp_list_pluck($categories, 'name') : [];
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60'; // Fallback thumbnail image

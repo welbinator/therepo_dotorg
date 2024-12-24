@@ -9,7 +9,7 @@ function repo_edit_form_shortcode() {
 
     $current_user_id = get_current_user_id();
     $user_submissions = get_posts([
-        'post_type' => ['plugin', 'theme_repo'],
+        'post_type' => ['plugin_repo', 'theme_repo'],
         'author' => $current_user_id,
         'post_status' => ['publish', 'pending'],
         'posts_per_page' => -1,
@@ -250,7 +250,7 @@ function handle_repo_edit_submission() {
 
     // Update categories
     $post_type = $post->post_type;
-    $taxonomy = $post_type === 'plugin' ? 'plugin-category' : 'theme-category';
+    $taxonomy = $post_type === 'plugin_repo' ? 'plugin-category' : 'theme-category';
     $category_list = array_map('trim', explode(',', $categories));
     wp_set_object_terms($submission_id, $category_list, $taxonomy);
 

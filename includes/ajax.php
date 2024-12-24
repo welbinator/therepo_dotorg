@@ -2,15 +2,17 @@
 namespace TheRepo\Ajax;
 
 function filter_plugins() {
+    global $wpdb;
+
     $search = sanitize_text_field($_GET['search'] ?? '');
     $type = sanitize_text_field($_GET['type'] ?? '');
     $category = sanitize_text_field($_GET['category'] ?? '');
 
-    $args = array(
-        'post_type' => array('plugin', 'theme_repo'), // Default: both plugins and themes
+    $args = [
+        'post_type' => ['plugin_repo', 'theme_repo'], // Default to both plugins and themes
         'posts_per_page' => -1,
         's' => $search,
-    );
+    ];
 
     // If a specific type is selected, filter by post type
     if ($type) {
@@ -19,43 +21,63 @@ function filter_plugins() {
 
     // Handle category filter
     if ($category) {
-        $taxonomies = array('plugin-category', 'theme-category');
-        if ($type === 'plugin') {
-            $taxonomies = array('plugin-category');
-        } elseif ($type === 'theme_repo') {
-            $taxonomies = array('theme-category');
-        }
-
-        $args['tax_query'] = array(
-            'relation' => 'OR', // Allow matching across multiple taxonomies
-        );
-
-        foreach ($taxonomies as $taxonomy) {
-            $args['tax_query'][] = array(
-                'taxonomy' => $taxonomy,
+        $args['tax_query'] = [
+            [
+                'taxonomy' => $type === 'plugin_repo' ? 'plugin-category' : 'theme-category',
                 'field'    => 'slug',
                 'terms'    => $category,
-            );
+            ],
+        ];
+    }
+
+    // Debugging: Log the query arguments
+    error_log('Filter Plugins Args: ' . print_r($args, true));
+
+    // Run the WP_Query
+    $query = new \WP_Query($args);
+
+    if (!$query->have_posts() && $search) {
+        // Fallback: Direct SQL query for better search capabilities
+        $post_types = implode("','", array_map('esc_sql', $args['post_type']));
+        $sql = "
+            SELECT DISTINCT p.ID
+            FROM {$wpdb->posts} p
+            LEFT JOIN {$wpdb->term_relationships} tr ON (p.ID = tr.object_id)
+            LEFT JOIN {$wpdb->term_taxonomy} tt ON (tr.term_taxonomy_id = tt.term_taxonomy_id)
+            LEFT JOIN {$wpdb->terms} t ON (tt.term_id = t.term_id)
+            WHERE p.post_type IN ('$post_types')
+            AND (p.post_title LIKE %s OR p.post_content LIKE %s OR t.name LIKE %s)
+            AND p.post_status = 'publish'
+        ";
+        $like = '%' . $wpdb->esc_like($search) . '%';
+        $results = $wpdb->get_col($wpdb->prepare($sql, $like, $like, $like));
+
+        // Run a secondary query to fetch these posts
+        if (!empty($results)) {
+            $query = new \WP_Query([
+                'post__in' => $results,
+                'post_type' => $args['post_type'],
+                'posts_per_page' => -1,
+            ]);
         }
     }
 
-    $query = new \WP_Query($args);
     if ($query->have_posts()) :
         while ($query->have_posts()) : $query->the_post();
-            $post_type = get_post_type() === 'plugin' ? 'Plugin' : 'Theme';
-            
-            // Safely fetch categories
+            $post_type = get_post_type() === 'plugin_repo' ? 'Plugin' : 'Theme';
+
+            // Fetch categories and tags
             $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
             $category_names = $categories && !is_wp_error($categories) ? wp_list_pluck($categories, 'name') : [];
 
-            // Safely fetch tags
-            $tags = get_the_terms(get_the_ID(), 'plugin-tags');
+            $tags = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-tag' : 'theme-tag');
             $tag_names = $tags && !is_wp_error($tags) ? wp_list_pluck($tags, 'name') : [];
 
-            $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60'; // Fallback thumbnail image
-            $cover_image = get_post_meta(get_the_ID(), 'cover_image_url', true) ?: ''; // Retrieve cover image URL
+            $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60';
+            $cover_image = get_post_meta(get_the_ID(), 'cover_image_url', true) ?: '';
             $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
-            $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true); // Get the value of the custom field
+            $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true);
+
             ?>
             <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
                 <div class="!p-6 !pb-12">
@@ -92,9 +114,7 @@ function filter_plugins() {
                             Download
                         </a>
                     </div>
-                    <?php if (!empty($cover_image)) : ?>
-                        <img src="<?php echo esc_url($cover_image); ?>" alt="Cover Image" class="!mt-4 !rounded-md">
-                    <?php endif; ?>
+                    
                 </div>
                 <?php if ($free_or_pro === 'Pro') : ?>
                     <div class="pro">Pro</div>
@@ -103,7 +123,7 @@ function filter_plugins() {
             <?php
         endwhile;
     else :
-        echo '<p class="!text-gray-600 !text-center">No results found.</p>';
+        echo '<p class="!text-gray-600">No results found.</p>';
     endif;
 
     wp_reset_postdata();
@@ -133,7 +153,7 @@ add_action('wp_ajax_get_submission_data', function () {
         'github_username' => get_post_meta($submission_id, 'github_username', true),
         'github_repo' => get_post_meta($submission_id, 'github_repo', true),
         'description' => $post->post_content,
-        'categories' => implode(', ', wp_get_post_terms($submission_id, get_post_type($submission_id) === 'plugin' ? 'plugin-category' : 'theme-category', ['fields' => 'names'])),
+        'categories' => implode(', ', wp_get_post_terms($submission_id, get_post_type($submission_id) === 'plugin_repo' ? 'plugin-category' : 'theme-category', ['fields' => 'names'])),
         'download_url' => get_post_meta($submission_id, 'download_url', true),
         'hosted_on_github' => get_post_meta($submission_id, 'hosted_on_github', true) ?: 'yes',
         'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($submission_id)) ?: '',
