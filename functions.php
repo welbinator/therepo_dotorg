@@ -2,14 +2,14 @@
 
 namespace TheRepo\Functions;
 
-// use Dotenv\Dotenv;
+use Dotenv\Dotenv;
 
-// require __DIR__ . '/vendor/autoload.php';
-// $dotenv = Dotenv::createImmutable(__DIR__);
-// $dotenv->load();
+require __DIR__ . '/vendor/autoload.php';
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-// $token = getenv('GITHUB_TOKEN');
-// error_log('Loaded Token: ' . $token);
+$token = getenv('GITHUB_TOKEN');
+error_log('Loaded Token: ' . $token);
 
 function allow_subscribers_to_edit_own_posts() {
     $subscriber_role = get_role('subscriber');
