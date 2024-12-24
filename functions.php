@@ -183,27 +183,4 @@ function fetch_latest_release_download_count($atts) {
 
 add_shortcode('number_of_downloads', __NAMESPACE__ . '\\fetch_latest_release_download_count');
 
-function update_plugin_post_type_to_plugin_repo() {
-    global $wpdb;
 
-    // Old and new post type slugs
-    $old_post_type = 'plugin';
-    $new_post_type = 'plugin_repo';
-
-    // Update all posts with the old post type
-    $updated_rows = $wpdb->update(
-        $wpdb->posts, 
-        ['post_type' => $new_post_type], // New post type
-        ['post_type' => $old_post_type] // Where clause: old post type
-    );
-
-    if ($updated_rows === false) {
-        wp_die('Error updating post types.');
-    } else {
-        // Clear WordPress caches
-        clean_post_cache(0);
-
-        echo "$updated_rows posts have been updated to the new post type.";
-    }
-}
-add_action('admin_init', __NAMESPACE__ . '\\update_plugin_post_type_to_plugin_repo');
