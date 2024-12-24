@@ -7,7 +7,7 @@ add_action('add_meta_boxes', function () {
         'repo_meta_box',                // Unique ID
         'Repository Details',           // Meta box title
         __NAMESPACE__ . '\\render_repo_meta_box', // Callback function
-        ['plugin', 'theme_repo'],       // Post types
+        ['plugin_repo', 'theme_repo'],       // Post types
         'normal',                       // Context
         'default'                       // Priority
     );
@@ -100,7 +100,7 @@ add_action('save_post', function ($post_id) {
 
 // Register REST API support for custom fields
 add_action('init', function () {
-    register_post_meta('plugin', 'cover_image_url', [
+    register_post_meta('plugin_repo', 'cover_image_url', [
         'type' => 'string',
         'description' => 'URL of the cover image',
         'single' => true,
@@ -115,14 +115,14 @@ add_action('init', function () {
     ]);
 
 
-    register_post_meta('plugin', 'latest_release_url', [
+    register_post_meta('plugin_repo', 'latest_release_url', [
         'type' => 'string',
         'description' => 'URL of the latest release',
         'single' => true,
         'show_in_rest' => true,
     ]);
 
-    register_post_meta('plugin', 'free_or_pro', [
+    register_post_meta('plugin_repo', 'free_or_pro', [
         'type' => 'string',
         'description' => 'Indicates if the submission is free or pro',
         'single' => true,
@@ -149,7 +149,7 @@ add_action('init', function () {
 // Register custom taxonomies
 add_action('init', function () {
     // Register Plugin Categories
-    register_taxonomy('plugin-category', ['plugin'], [
+    register_taxonomy('plugin-category', ['plugin_repo'], [
         'labels' => [
             'name' => 'Plugin Categories',
             'singular_name' => 'Plugin Category',
@@ -185,7 +185,7 @@ add_action('init', function () {
     ]);
 
     // Register Plugin Tags
-    register_taxonomy('plugin-tag', ['plugin'], [
+    register_taxonomy('plugin-tag', ['plugin_repo'], [
         'labels' => [
             'name' => 'Plugin Tags',
             'singular_name' => 'Plugin Tag',
@@ -226,7 +226,7 @@ add_action('init', function () {
 
 // Register custom post types
 add_action('init', function () {
-    register_post_type('plugin', [
+    register_post_type('plugin_repo', [
         'labels' => [
             'name' => 'Plugins',
             'singular_name' => 'Plugin',
