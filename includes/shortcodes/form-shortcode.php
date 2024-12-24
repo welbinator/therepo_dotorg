@@ -117,7 +117,7 @@ function handle_plugin_repo_submission() {
                 $file_tmp_path = $uploaded_file['tmp_name'];
                 $file_name = $uploaded_file['name'];
                 $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-                $allowed_extensions = ['md', 'html', 'htm'];
+                $allowed_extensions = ['md', 'html', 'htm', 'txt'];
 
                 if (in_array($file_extension, $allowed_extensions, true)) {
                     $file_content = file_get_contents($file_tmp_path);
@@ -342,7 +342,7 @@ function plugin_repo_submission_form_shortcode() {
                                 type="file" 
                                 name="markdown_file" 
                                 id="markdown_file" 
-                                 accept=".md,.html,.htm"
+                                 accept=".md,.html,.htm,.txt"
                                 class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
@@ -390,6 +390,7 @@ function plugin_repo_submission_form_shortcode() {
                             required 
                             class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
+                        <p class="text-sm text-gray-500 mt-1">Profile picture should be a square or a circle</p>
                     </div>
 
                     <!-- Cover Image -->
@@ -402,6 +403,7 @@ function plugin_repo_submission_form_shortcode() {
                             accept="image/jpg,image/jpeg,image/png" 
                             class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
+                        <p class="text-sm text-gray-500 mt-1">16:4 aspect ratio</p>
                     </div>
 
                     <!-- Submit Button -->
