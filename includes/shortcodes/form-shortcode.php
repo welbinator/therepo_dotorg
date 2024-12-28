@@ -2,7 +2,6 @@
 
 namespace TheRepo\Shortcode\Form;
 
-
 function handle_plugin_repo_submission() {
     if (!isset($_POST['plugin_repo_nonce']) || !wp_verify_nonce($_POST['plugin_repo_nonce'], 'plugin_repo_submission')) {
         wp_die('Error: Invalid form submission.');
@@ -12,17 +11,17 @@ function handle_plugin_repo_submission() {
         wp_die('Error: You must be logged in to submit a plugin or theme.');
     }
 
-    // Gather input values
-    $type = sanitize_text_field($_POST['type']);
-    $name = sanitize_text_field($_POST['name']);
-    $hosted_on_github = sanitize_text_field($_POST['hosted_on_github']);
-    $github_username = sanitize_text_field($_POST['github_username']);
-    $github_repo = sanitize_text_field($_POST['github_repo']);
-    $markdown_file_name = sanitize_text_field($_POST['markdown_file_name']);
-    $landing_page_content = sanitize_text_field($_POST['landing_page_content']);
-    $download_url = esc_url_raw($_POST['download_url']);
-    $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', $_POST['categories']) : array();
-    $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', $_POST['tags']) : array();
+    // Gather input values with sanitization
+    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : '';
+    $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
+    $hosted_on_github = isset($_POST['hosted_on_github']) ? sanitize_text_field($_POST['hosted_on_github']) : '';
+    $github_username = isset($_POST['github_username']) ? sanitize_text_field($_POST['github_username']) : '';
+    $github_repo = isset($_POST['github_repo']) ? sanitize_text_field($_POST['github_repo']) : '';
+    $markdown_file_name = isset($_POST['markdown_file_name']) ? sanitize_text_field($_POST['markdown_file_name']) : '';
+    $landing_page_content = isset($_POST['landing_page_content']) ? sanitize_text_field($_POST['landing_page_content']) : '';
+    $download_url = isset($_POST['download_url']) ? esc_url_raw($_POST['download_url']) : '';
+    $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', (array) $_POST['categories']) : [];
+    $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', (array) $_POST['tags']) : [];
     $post_content = 'Add your plugin/theme information here!';
 
     // General field validation
@@ -30,66 +29,26 @@ function handle_plugin_repo_submission() {
         wp_die('Error: All fields are required.');
     }
 
-    // Define allowed HTML tags and attributes for sanitization
-    $allowed_html = [
-        'img' => [
-            'src' => [],
-            'alt' => [],
-        ],
-        'p' => [],
-        'a' => [
-            'href' => [],
-        ],
-        'ul' => [],
-        'ol' => [],
-        'li' => [],
-        'strong' => [],
-        'em' => [],
-        'h1' => [],
-        'h2' => [],
-        'h3' => [],
-        'h4' => [],
-        'h5' => [],
-        'h6' => [],
-        'blockquote' => [],
-        'code' => [],
-        'pre' => [],
-        'br' => [],
-        'hr' => [],
-    ];
-
     // Handle "Import Markdown file from GitHub"
     if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
         if (!empty($markdown_file_name)) {
-            // Fetch repository details to determine the default branch
             $repo_api_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo);
-            $repo_info = wp_remote_get($repo_api_url, [
-                'headers' => [
-                    'User-Agent' => 'TheRepo-Plugin',
-                ],
-            ]);
-        
+            $repo_info = wp_remote_get($repo_api_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
+
             if (!is_wp_error($repo_info) && wp_remote_retrieve_response_code($repo_info) === 200) {
                 $repo_data = json_decode(wp_remote_retrieve_body($repo_info), true);
-                $default_branch = $repo_data['default_branch'] ?? 'main'; // Use 'main' as a fallback
+                $default_branch = $repo_data['default_branch'] ?? 'main';
             } else {
-                error_log('GitHub API Error: ' . print_r($repo_info, true)); // Log error for debugging
+                error_log('GitHub API Error: ' . print_r($repo_info, true));
                 wp_die('Error: Unable to fetch the repository information from GitHub.');
             }
-        
-            // Construct the URL for the Markdown file
+
             $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
-        
-            // Fetch the Markdown file
-            $response = wp_remote_get($readme_url, [
-                'headers' => [
-                    'User-Agent' => 'TheRepo-Plugin',
-                ],
-            ]);
-        
+            $response = wp_remote_get($readme_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
+
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
                 $markdown = wp_remote_retrieve_body($response);
-        
+
                 if (!empty($markdown)) {
                     $parsedown = new \Parsedown();
                     $post_content = $parsedown->text($markdown);
@@ -105,44 +64,6 @@ function handle_plugin_repo_submission() {
         } else {
             wp_die('Error: Please specify the Markdown file name.');
         }
-        
-    }
-
-    // Handle "Upload Markdown file"
-    if ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
-        if (!empty($_FILES['markdown_file']['name'])) {
-            $uploaded_file = $_FILES['markdown_file'];
-
-            if ($uploaded_file['error'] === UPLOAD_ERR_OK) {
-                $file_tmp_path = $uploaded_file['tmp_name'];
-                $file_name = $uploaded_file['name'];
-                $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-                $allowed_extensions = ['md', 'html', 'htm', 'txt'];
-
-                if (in_array($file_extension, $allowed_extensions, true)) {
-                    $file_content = file_get_contents($file_tmp_path);
-
-                    if (!empty($file_content)) {
-                        if ($file_extension === 'md') {
-                            $parsedown = new \Parsedown();
-                            $post_content = $parsedown->text($file_content);
-                        } else {
-                            $post_content = wp_kses($file_content, $allowed_html);
-                        }
-
-                        $post_content = wp_kses_post(wp_slash($post_content));
-                    } else {
-                        wp_die('Error: The uploaded file is empty.');
-                    }
-                } else {
-                    wp_die('Error: Unsupported file type. Please upload a Markdown (.md), HTML (.html), or HTM (.htm) file.');
-                }
-            } else {
-                wp_die('Error: File upload failed. Please try again.');
-            }
-        } else {
-            wp_die('Error: No file was uploaded.');
-        }
     }
 
     // Handle "Not hosted on GitHub" and fallback
@@ -150,11 +71,9 @@ function handle_plugin_repo_submission() {
         if (empty($post_content)) {
             wp_die('Error: You must upload a valid file to populate the post content.');
         }
-
         if (empty($download_url)) {
             wp_die('Error: Download URL is required when not hosted on GitHub.');
         }
-
         $latest_release_url = $download_url;
     } else {
         $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
@@ -164,8 +83,12 @@ function handle_plugin_repo_submission() {
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], array('test_form' => false));
+
         if ($upload && !isset($upload['error'])) {
-            $filetype = wp_check_filetype($upload['file']);
+            $file_path = $upload['file'];
+            $file_url = $upload['url'];
+            $filetype = wp_check_filetype($file_path);
+
             $attachment = array(
                 'post_mime_type' => $filetype['type'],
                 'post_title'     => sanitize_file_name($_FILES['featured_image']['name']),
@@ -173,23 +96,17 @@ function handle_plugin_repo_submission() {
                 'post_status'    => 'inherit',
             );
 
-            $featured_image_id = wp_insert_attachment($attachment, $upload['file']);
-            require_once(ABSPATH . 'wp-admin/includes/image.php');
-            $attach_data = wp_generate_attachment_metadata($featured_image_id, $upload['file']);
-            wp_update_attachment_metadata($featured_image_id, $attach_data);
+            $featured_image_id = wp_insert_attachment($attachment, $file_path);
+
+            if (!is_wp_error($featured_image_id)) {
+                require_once(ABSPATH . 'wp-admin/includes/image.php');
+                $attach_data = wp_generate_attachment_metadata($featured_image_id, $file_path);
+                wp_update_attachment_metadata($featured_image_id, $attach_data);
+            } else {
+                wp_die('Error creating attachment for featured image.');
+            }
         } else {
             wp_die('Error uploading featured image: ' . $upload['error']);
-        }
-    }
-
-    // Handle file upload for cover image
-    $cover_image_url = null;
-    if (!empty($_FILES['cover_image_url']['name'])) {
-        $upload = wp_handle_upload($_FILES['cover_image_url'], array('test_form' => false));
-        if ($upload && !isset($upload['error'])) {
-            $cover_image_url = $upload['url'];
-        } else {
-            wp_die('Error uploading cover image: ' . $upload['error']);
         }
     }
 
@@ -199,13 +116,13 @@ function handle_plugin_repo_submission() {
     $tags_taxonomy = $type === 'plugin_repo' ? 'plugin-tag' : 'theme-tag';
 
     // Create the post
-    $post_id = wp_insert_post(array(
+    $post_id = wp_insert_post([
         'post_title'   => $name,
         'post_content' => $post_content,
         'post_type'    => $post_type,
         'post_status'  => 'pending',
         'post_author'  => get_current_user_id(),
-    ));
+    ]);
 
     if ($post_id) {
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
@@ -221,10 +138,6 @@ function handle_plugin_repo_submission() {
         wp_set_object_terms($post_id, $categories, $taxonomy);
         wp_set_object_terms($post_id, $tags, $tags_taxonomy);
 
-        if ($cover_image_url) {
-            update_post_meta($post_id, 'cover_image_url', $cover_image_url);
-        }
-
         if ($featured_image_id) {
             set_post_thumbnail($post_id, $featured_image_id);
         }
@@ -235,6 +148,8 @@ function handle_plugin_repo_submission() {
         wp_die('Error: Unable to create the submission.');
     }
 }
+
+
 
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
