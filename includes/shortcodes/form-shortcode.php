@@ -18,7 +18,8 @@ function handle_plugin_repo_submission() {
     $github_username = isset($_POST['github_username']) ? sanitize_text_field($_POST['github_username']) : '';
     $github_repo = isset($_POST['github_repo']) ? sanitize_text_field($_POST['github_repo']) : '';
     $markdown_file_name = isset($_POST['markdown_file_name']) ? sanitize_text_field($_POST['markdown_file_name']) : '';
-    $landing_page_content = isset($_POST['landing_page_content']) ? sanitize_text_field($_POST['landing_page_content']) : '';
+    // $landing_page_content = isset($_POST['landing_page_content']) ? sanitize_text_field($_POST['landing_page_content']) : '';
+    $landing_page_content = sanitize_text_field($_POST['landing_page_content']);
     $download_url = isset($_POST['download_url']) ? esc_url_raw($_POST['download_url']) : '';
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', (array) $_POST['categories']) : [];
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', (array) $_POST['tags']) : [];
@@ -65,6 +66,44 @@ function handle_plugin_repo_submission() {
             wp_die('Error: Please specify the Markdown file name.');
         }
     }
+
+     // Handle "Upload Markdown file"
+     if ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
+        if (!empty($_FILES['markdown_file']['name'])) {
+            $uploaded_file = $_FILES['markdown_file'];
+
+            if ($uploaded_file['error'] === UPLOAD_ERR_OK) {
+                $file_tmp_path = $uploaded_file['tmp_name'];
+                $file_name = $uploaded_file['name'];
+                $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                $allowed_extensions = ['md', 'html', 'htm', 'txt'];
+
+                if (in_array($file_extension, $allowed_extensions, true)) {
+                    $file_content = file_get_contents($file_tmp_path);
+
+                    if (!empty($file_content)) {
+                        if ($file_extension === 'md') {
+                            $parsedown = new \Parsedown();
+                            $post_content = $parsedown->text($file_content);
+                        } else {
+                            $post_content = wp_kses($file_content, $allowed_html);
+                        }
+
+                        $post_content = wp_kses_post(wp_slash($post_content));
+                    } else {
+                        wp_die('Error: The uploaded file is empty.');
+                    }
+                } else {
+                    wp_die('Error: Unsupported file type. Please upload a Markdown (.md), HTML (.html), or HTM (.htm) file.');
+                }
+            } else {
+                wp_die('Error: File upload failed. Please try again.');
+            }
+        } else {
+            wp_die('Error: No file was uploaded.');
+        }
+    }
+
 
     // Handle "Not hosted on GitHub" and fallback
     if ($hosted_on_github === 'no') {
