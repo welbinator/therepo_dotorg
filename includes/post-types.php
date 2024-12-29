@@ -58,49 +58,58 @@ function render_repo_meta_box($post) {
 
 // Save meta box data
 add_action('save_post', function ($post_id) {
+    // Ensure the nonce is set and valid
     if (!isset($_POST['repo_meta_box_nonce']) || !wp_verify_nonce($_POST['repo_meta_box_nonce'], 'repo_meta_box_nonce')) {
-        return;
+        return; // Stop execution if the nonce is invalid
     }
 
+    // Prevent auto-saves from running this function
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
         return;
     }
 
+    // Ensure the user has permission to edit this post
     if (!current_user_can('edit_post', $post_id)) {
         return;
     }
 
-    // Sanitize and save inputs
-    $latest_release_url = sanitize_post_input('latest_release_url', 'esc_url_raw');
-    if (!empty($latest_release_url)) {
+    // Sanitize and save 'latest_release_url'
+    if (isset($_POST['latest_release_url'])) {
+        $latest_release_url = esc_url_raw($_POST['latest_release_url']);
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
     }
 
-    $free_or_pro = sanitize_post_input('free_or_pro', function ($value) {
+    // Sanitize and save 'free_or_pro'
+    if (isset($_POST['free_or_pro'])) {
         $allowed_values = ['Free', 'Pro'];
-        return in_array($value, $allowed_values, true) ? $value : 'Free';
-    });
-    update_post_meta($post_id, 'free_or_pro', $free_or_pro);
+        $free_or_pro = in_array($_POST['free_or_pro'], $allowed_values, true) ? $_POST['free_or_pro'] : 'Free';
+        update_post_meta($post_id, 'free_or_pro', $free_or_pro);
+    }
 
-    // Handle file upload for cover_image
+    // Handle file upload for 'cover_image_url'
     if (!empty($_FILES['cover_image_url']['name'])) {
         $file = $_FILES['cover_image_url'];
 
-        // Validate file type
+        // Validate file type and size
         $allowed_types = ['image/jpeg', 'image/png'];
+        $max_file_size = 2 * 1024 * 1024; // 2 MB
         $file_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
-        if (in_array($file_type['type'], $allowed_types, true)) {
+        $file_size = filesize($file['tmp_name']);
+
+        if (in_array($file_type['type'], $allowed_types, true) && $file_size <= $max_file_size) {
             $upload = wp_handle_upload($file, ['test_form' => false]);
+
             if ($upload && !isset($upload['error'])) {
                 update_post_meta($post_id, 'cover_image_url', esc_url_raw($upload['url']));
             } else {
                 error_log('Cover image upload error: ' . $upload['error']);
             }
         } else {
-            error_log('Invalid file type uploaded.');
+            error_log('Invalid file type or file too large.');
         }
     }
 });
+
 
 // Register REST API support for custom fields
 add_action('init', function () {
