@@ -1,6 +1,11 @@
 <?php
 namespace TheRepo\CustomPosts;
 
+// Utility function to sanitize input
+function sanitize_post_input($key, $sanitize_callback = 'sanitize_text_field', $default = '') {
+    return isset($_POST[$key]) ? call_user_func($sanitize_callback, $_POST[$key]) : $default;
+}
+
 // Register custom meta boxes for custom fields
 add_action('add_meta_boxes', function () {
     add_meta_box(
@@ -17,7 +22,7 @@ add_action('add_meta_boxes', function () {
 function render_repo_meta_box($post) {
     $latest_release_url = get_post_meta($post->ID, 'latest_release_url', true);
     $free_or_pro = get_post_meta($post->ID, 'free_or_pro', true);
-    $cover_image_url = get_post_meta($post->ID, 'cover_image_url', true); // Retrieve the cover image URL
+    $cover_image_url = get_post_meta($post->ID, 'cover_image_url', true);
 
     if ($free_or_pro === '') {
         $free_or_pro = 'Free';
@@ -51,8 +56,6 @@ function render_repo_meta_box($post) {
     <?php
 }
 
-
-
 // Save meta box data
 add_action('save_post', function ($post_id) {
     if (!isset($_POST['repo_meta_box_nonce']) || !wp_verify_nonce($_POST['repo_meta_box_nonce'], 'repo_meta_box_nonce')) {
@@ -67,192 +70,110 @@ add_action('save_post', function ($post_id) {
         return;
     }
 
-    // Save latest_release_url
-    if (isset($_POST['latest_release_url'])) {
-        update_post_meta($post_id, 'latest_release_url', sanitize_text_field($_POST['latest_release_url']));
+    // Sanitize and save inputs
+    $latest_release_url = sanitize_post_input('latest_release_url', 'esc_url_raw');
+    if (!empty($latest_release_url)) {
+        update_post_meta($post_id, 'latest_release_url', $latest_release_url);
     }
 
-    // Save free_or_pro
-    $free_or_pro = isset($_POST['free_or_pro']) ? sanitize_text_field($_POST['free_or_pro']) : 'Free';
+    $free_or_pro = sanitize_post_input('free_or_pro', function ($value) {
+        $allowed_values = ['Free', 'Pro'];
+        return in_array($value, $allowed_values, true) ? $value : 'Free';
+    });
     update_post_meta($post_id, 'free_or_pro', $free_or_pro);
 
     // Handle file upload for cover_image
     if (!empty($_FILES['cover_image_url']['name'])) {
         $file = $_FILES['cover_image_url'];
 
-        // Check the file type
+        // Validate file type
         $allowed_types = ['image/jpeg', 'image/png'];
-        if (in_array($file['type'], $allowed_types)) {
-            // Upload the file
+        $file_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
+        if (in_array($file_type['type'], $allowed_types, true)) {
             $upload = wp_handle_upload($file, ['test_form' => false]);
-
             if ($upload && !isset($upload['error'])) {
-                // Store the file URL in the meta field
                 update_post_meta($post_id, 'cover_image_url', esc_url_raw($upload['url']));
             } else {
-                // Log the error for debugging
                 error_log('Cover image upload error: ' . $upload['error']);
             }
+        } else {
+            error_log('Invalid file type uploaded.');
         }
     }
 });
 
-
 // Register REST API support for custom fields
 add_action('init', function () {
-    register_post_meta('plugin_repo', 'cover_image_url', [
-        'type' => 'string',
-        'description' => 'URL of the cover image',
-        'single' => true,
-        'show_in_rest' => true,
-    ]);
-    
-    register_post_meta('theme_repo', 'cover_image_url', [
-        'type' => 'string',
-        'description' => 'URL of the cover image',
-        'single' => true,
-        'show_in_rest' => true,
-    ]);
+    $meta_fields = [
+        'cover_image_url' => 'URL of the cover image',
+        'latest_release_url' => 'URL of the latest release',
+        'free_or_pro' => 'Indicates if the submission is free or pro'
+    ];
 
-
-    register_post_meta('plugin_repo', 'latest_release_url', [
-        'type' => 'string',
-        'description' => 'URL of the latest release',
-        'single' => true,
-        'show_in_rest' => true,
-    ]);
-
-    register_post_meta('plugin_repo', 'free_or_pro', [
-        'type' => 'string',
-        'description' => 'Indicates if the submission is free or pro',
-        'single' => true,
-        'show_in_rest' => true,
-        'default' => 'Free',
-    ]);
-
-    register_post_meta('theme_repo', 'latest_release_url', [
-        'type' => 'string',
-        'description' => 'URL of the latest release',
-        'single' => true,
-        'show_in_rest' => true,
-    ]);
-
-    register_post_meta('theme_repo', 'free_or_pro', [
-        'type' => 'string',
-        'description' => 'Indicates if the submission is free or pro',
-        'single' => true,
-        'show_in_rest' => true,
-        'default' => 'Free',
-    ]);
+    foreach (['plugin_repo', 'theme_repo'] as $post_type) {
+        foreach ($meta_fields as $meta_key => $description) {
+            register_post_meta($post_type, $meta_key, [
+                'type' => 'string',
+                'description' => $description,
+                'single' => true,
+                'show_in_rest' => true,
+                'sanitize_callback' => ($meta_key === 'latest_release_url') ? 'esc_url_raw' : 'sanitize_text_field',
+                'default' => ($meta_key === 'free_or_pro') ? 'Free' : ''
+            ]);
+        }
+    }
 });
 
 // Register custom taxonomies
 add_action('init', function () {
-    // Register Plugin Categories
-    register_taxonomy('plugin-category', ['plugin_repo'], [
-        'labels' => [
-            'name' => 'Plugin Categories',
-            'singular_name' => 'Plugin Category',
-            'menu_name' => 'Plugin Categories',
-            'all_items' => 'All Plugin Categories',
-            'edit_item' => 'Edit Plugin Category',
-            'view_item' => 'View Plugin Category',
-            'add_new_item' => 'Add New Plugin Category',
-            'new_item_name' => 'New Plugin Category Name',
-            'search_items' => 'Search Plugin Categories',
-            'not_found' => 'No plugin categories found',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-    ]);
+    $taxonomies = [
+        'plugin-category' => ['plugin_repo', 'Plugin Categories', 'Plugin Category'],
+        'theme-category' => ['theme_repo', 'Theme Categories', 'Theme Category'],
+        'plugin-tag' => ['plugin_repo', 'Plugin Tags', 'Plugin Tag'],
+        'theme-tag' => ['theme_repo', 'Theme Tags', 'Theme Tag']
+    ];
 
-    // Register Theme Categories
-    register_taxonomy('theme-category', ['theme_repo'], [
-        'labels' => [
-            'name' => 'Theme Categories',
-            'singular_name' => 'Theme Category',
-            'menu_name' => 'Theme Categories',
-            'all_items' => 'All Theme Categories',
-            'edit_item' => 'Edit Theme Category',
-            'view_item' => 'View Theme Category',
-            'add_new_item' => 'Add New Theme Category',
-            'new_item_name' => 'New Theme Category Name',
-            'search_items' => 'Search Theme Categories',
-            'not_found' => 'No theme categories found',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-    ]);
-
-    // Register Plugin Tags
-    register_taxonomy('plugin-tag', ['plugin_repo'], [
-        'labels' => [
-            'name' => 'Plugin Tags',
-            'singular_name' => 'Plugin Tag',
-            'menu_name' => 'Plugin Tags',
-            'all_items' => 'All Plugin Tags',
-            'edit_item' => 'Edit Plugin Tag',
-            'view_item' => 'View Plugin Tag',
-            'add_new_item' => 'Add New Plugin Tag',
-            'new_item_name' => 'New Plugin Tag Name',
-            'search_items' => 'Search Plugin Tags',
-            'not_found' => 'No plugin Tags found',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-    ]);
-
-    // Register Theme Tags
-    register_taxonomy('theme-tag', ['theme_repo'], [
-        'labels' => [
-            'name' => 'Theme Tags',
-            'singular_name' => 'Theme Tag',
-            'menu_name' => 'Theme Tags',
-            'all_items' => 'All Theme Tags',
-            'edit_item' => 'Edit Theme Tag',
-            'view_item' => 'View Theme Tag',
-            'add_new_item' => 'Add New Theme Tag',
-            'new_item_name' => 'New Theme Tag Name',
-            'search_items' => 'Search Theme Tags',
-            'not_found' => 'No theme Tags found',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-    ]);
-
-   
+    foreach ($taxonomies as $taxonomy => $details) {
+        register_taxonomy($taxonomy, [$details[0]], [
+            'labels' => [
+                'name' => $details[1],
+                'singular_name' => $details[2],
+                'menu_name' => $details[1],
+                'all_items' => "All {$details[1]}",
+                'edit_item' => "Edit {$details[2]}",
+                'view_item' => "View {$details[2]}",
+                'add_new_item' => "Add New {$details[2]}",
+                'new_item_name' => "New {$details[2]} Name",
+                'search_items' => "Search {$details[1]}",
+                'not_found' => "No {$details[1]} found",
+            ],
+            'public' => true,
+            'show_in_rest' => true,
+        ]);
+    }
 });
-
 
 // Register custom post types
 add_action('init', function () {
-    register_post_type('plugin_repo', [
-        'labels' => [
-            'name' => 'Plugins',
-            'singular_name' => 'Plugin',
-            'menu_name' => 'Plugins',
-            'all_items' => 'All Plugins',
-            'add_new_item' => 'Add New Plugin',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-        'menu_icon' => 'dashicons-admin-post',
-        'supports' => ['title', 'editor', 'thumbnail', 'custom-fields', 'author'],
-        'taxonomies' => ['plugin-category'],
-    ]);
+    $post_types = [
+        'plugin_repo' => ['Plugins', 'Plugin'],
+        'theme_repo' => ['Themes', 'Theme']
+    ];
 
-    register_post_type('theme_repo', [
-        'labels' => [
-            'name' => 'Themes',
-            'singular_name' => 'Theme',
-            'menu_name' => 'Themes',
-            'all_items' => 'All Themes',
-            'add_new_item' => 'Add New Theme',
-        ],
-        'public' => true,
-        'show_in_rest' => true,
-        'menu_icon' => 'dashicons-admin-post',
-        'supports' => ['title', 'editor', 'thumbnail', 'custom-fields', 'author'],
-        'taxonomies' => ['theme-category'],
-    ]);
+    foreach ($post_types as $post_type => $details) {
+        register_post_type($post_type, [
+            'labels' => [
+                'name' => $details[0],
+                'singular_name' => $details[1],
+                'menu_name' => $details[0],
+                'all_items' => "All {$details[0]}",
+                'add_new_item' => "Add New {$details[1]}",
+            ],
+            'public' => true,
+            'show_in_rest' => true,
+            'menu_icon' => 'dashicons-admin-post',
+            'supports' => ['title', 'editor', 'thumbnail', 'custom-fields', 'author'],
+            'taxonomies' => [$post_type . '-category'],
+        ]);
+    }
 });

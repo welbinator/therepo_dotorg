@@ -4,22 +4,20 @@ namespace TheRepo\Ajax;
 function filter_plugins() {
     global $wpdb;
 
-    $search = sanitize_text_field($_GET['search'] ?? '');
-    $type = sanitize_text_field($_GET['type'] ?? '');
-    $category = sanitize_text_field($_GET['category'] ?? '');
+    $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+    $type = isset($_GET['type']) ? sanitize_text_field($_GET['type']) : '';
+    $category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
 
     $args = [
-        'post_type' => ['plugin_repo', 'theme_repo'], // Default to both plugins and themes
+        'post_type' => ['plugin_repo', 'theme_repo'],
         'posts_per_page' => -1,
         's' => $search,
     ];
 
-    // If a specific type is selected, filter by post type
     if ($type) {
         $args['post_type'] = $type;
     }
 
-    // Handle category filter
     if ($category) {
         $args['tax_query'] = [
             [
@@ -30,14 +28,11 @@ function filter_plugins() {
         ];
     }
 
-    // Debugging: Log the query arguments
     error_log('Filter Plugins Args: ' . print_r($args, true));
 
-    // Run the WP_Query
     $query = new \WP_Query($args);
 
     if (!$query->have_posts() && $search) {
-        // Fallback: Direct SQL query for better search capabilities
         $post_types = implode("','", array_map('esc_sql', $args['post_type']));
         $sql = "
             SELECT DISTINCT p.ID
@@ -52,7 +47,6 @@ function filter_plugins() {
         $like = '%' . $wpdb->esc_like($search) . '%';
         $results = $wpdb->get_col($wpdb->prepare($sql, $like, $like, $like));
 
-        // Run a secondary query to fetch these posts
         if (!empty($results)) {
             $query = new \WP_Query([
                 'post__in' => $results,
@@ -65,19 +59,14 @@ function filter_plugins() {
     if ($query->have_posts()) :
         while ($query->have_posts()) : $query->the_post();
             $post_type = get_post_type() === 'plugin_repo' ? 'Plugin' : 'Theme';
-
-            // Fetch categories and tags
             $categories = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-category' : 'theme-category');
             $category_names = $categories && !is_wp_error($categories) ? wp_list_pluck($categories, 'name') : [];
-
             $tags = get_the_terms(get_the_ID(), $post_type === 'Plugin' ? 'plugin-tag' : 'theme-tag');
             $tag_names = $tags && !is_wp_error($tags) ? wp_list_pluck($tags, 'name') : [];
-
             $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60';
             $cover_image = get_post_meta(get_the_ID(), 'cover_image_url', true) ?: '';
             $latest_release_url = get_post_meta(get_the_ID(), 'latest_release_url', true);
             $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true);
-
             ?>
             <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
                 <div class="!p-6 !pb-12">
@@ -122,7 +111,6 @@ function filter_plugins() {
                             Download
                         </a>
                     </div>
-                    
                 </div>
                 <?php if ($free_or_pro === 'Pro') : ?>
                     <div class="pro">Pro</div>
@@ -135,7 +123,6 @@ function filter_plugins() {
     endif;
 
     wp_reset_postdata();
-
     wp_die();
 }
 
@@ -166,14 +153,9 @@ add_action('wp_ajax_get_submission_data', function () {
         'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($submission_id)) ?: '',
     ];
 
-    // Log the data being returned for debugging
     error_log('Submission Data: ' . print_r($data, true));
-
     wp_send_json_success($data);
 });
-
-
-
 
 // category select2 ajax
 add_action('wp_ajax_get_categories', __NAMESPACE__ . '\\get_categories');
@@ -186,19 +168,19 @@ function get_categories() {
     }
 
     $search = sanitize_text_field($_GET['q']);
-    $taxonomy = 'plugin-category'; // Replace with your desired taxonomy
-    $categories = get_terms(array(
+    $taxonomy = 'plugin-category';
+    $categories = get_terms([
         'taxonomy'   => $taxonomy,
         'name__like' => $search,
         'hide_empty' => false,
-    ));
+    ]);
 
-    $results = array();
+    $results = [];
     foreach ($categories as $category) {
-        $results[] = array(
+        $results[] = [
             'id'   => $category->slug,
             'text' => $category->name,
-        );
+        ];
     }
 
     wp_send_json($results);
@@ -215,19 +197,19 @@ function get_tags() {
     }
 
     $search = sanitize_text_field($_GET['q']);
-    $taxonomy = 'plugin-tags'; // Replace with your tags taxonomy
-    $tags = get_terms(array(
+    $taxonomy = 'plugin-tags';
+    $tags = get_terms([
         'taxonomy'   => $taxonomy,
         'name__like' => $search,
         'hide_empty' => false,
-    ));
+    ]);
 
-    $results = array();
+    $results = [];
     foreach ($tags as $tag) {
-        $results[] = array(
+        $results[] = [
             'id'   => $tag->slug,
             'text' => $tag->name,
-        );
+        ];
     }
 
     wp_send_json($results);

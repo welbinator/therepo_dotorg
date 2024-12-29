@@ -43,7 +43,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     alert('Failed to fetch release information. Please try again later.');
                 });
         } else {
-            console.log('Debug: Invalid API URL detected:', apiUrl);
+             // Handle non-GitHub-hosted plugins (direct download URL)
+        event.preventDefault(); // Prevent default navigation
+        button.href = apiUrl; // Update the href
+        window.location.href = apiUrl; // Redirect to the download URL
         }
     });
 
