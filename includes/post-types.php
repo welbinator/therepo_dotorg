@@ -23,6 +23,7 @@ function render_repo_meta_box($post) {
     $latest_release_url = get_post_meta($post->ID, 'latest_release_url', true);
     $free_or_pro = get_post_meta($post->ID, 'free_or_pro', true);
     $cover_image_url = get_post_meta($post->ID, 'cover_image_url', true);
+    $support_url = get_post_meta($post->ID, 'support_url', true);
 
     if ($free_or_pro === '') {
         $free_or_pro = 'Free';
@@ -35,6 +36,13 @@ function render_repo_meta_box($post) {
         <input type="url" id="latest_release_url" name="latest_release_url"
                value="<?php echo esc_attr($latest_release_url); ?>"
                class="widefat">
+    </p>
+    <p>
+        <label for="support_url"><strong>Support URL:</strong></label>
+        <input type="url" id="support_url" name="support_url"
+               value="<?php echo esc_attr($support_url); ?>"
+               class="widefat">
+        <small>Enter the URL for support (e.g., GitHub Issues page).</small>
     </p>
     <p>
         <strong>Free or Pro:</strong><br>
@@ -79,6 +87,12 @@ add_action('save_post', function ($post_id) {
         update_post_meta($post_id, 'latest_release_url', $latest_release_url);
     }
 
+     // Sanitize and save 'support_url'
+     if (isset($_POST['support_url'])) {
+        $support_url = esc_url_raw($_POST['support_url']);
+        update_post_meta($post_id, 'support_url', $support_url);
+    }
+
     // Sanitize and save 'free_or_pro'
     if (isset($_POST['free_or_pro'])) {
         $allowed_values = ['Free', 'Pro'];
@@ -116,6 +130,7 @@ add_action('init', function () {
     $meta_fields = [
         'cover_image_url' => 'URL of the cover image',
         'latest_release_url' => 'URL of the latest release',
+        'support_url' => 'URL of the support page',
         'free_or_pro' => 'Indicates if the submission is free or pro'
     ];
 
