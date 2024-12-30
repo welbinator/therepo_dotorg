@@ -58,45 +58,42 @@ function handle_plugin_repo_submission() {
     ];
     
     // Handle "Import Markdown file from GitHub"
-if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
-    if (!empty($markdown_file_name)) {
-        // Fetch repository details to determine the default branch
-        $repo_api_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo);
-        $repo_info = wp_remote_get($repo_api_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
+    if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
+        if (!empty($markdown_file_name)) {
+            $repo_api_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo);
+            $repo_info = wp_remote_get($repo_api_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
 
-        if (!is_wp_error($repo_info) && wp_remote_retrieve_response_code($repo_info) === 200) {
-            $repo_data = json_decode(wp_remote_retrieve_body($repo_info), true);
-            $default_branch = $repo_data['default_branch'] ?? 'main'; // Default to 'main' if branch info is unavailable
-        } else {
-            error_log('GitHub API Error: ' . print_r($repo_info, true));
-            wp_die('Error: Unable to fetch repository details from GitHub.');
-        }
-
-        // Construct URL for the Markdown file
-        $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
-
-        // Fetch the Markdown file
-        $response = wp_remote_get($readme_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
-
-        if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-            $markdown = wp_remote_retrieve_body($response);
-
-            if (!empty($markdown)) {
-                $parsedown = new \Parsedown();
-                $post_content = $parsedown->text($markdown); // Convert Markdown to HTML
-                $post_content = wp_kses_post(wp_slash($post_content)); // Sanitize the HTML
+            if (!is_wp_error($repo_info) && wp_remote_retrieve_response_code($repo_info) === 200) {
+                $repo_data = json_decode(wp_remote_retrieve_body($repo_info), true);
+                $default_branch = $repo_data['default_branch'] ?? 'main';
             } else {
-                error_log('Markdown File Error: File content is empty. URL: ' . $readme_url);
-                wp_die('Error: The Markdown file from GitHub is empty.');
+                error_log('GitHub API Error: ' . print_r($repo_info, true));
+                wp_die('Error: Unable to fetch repository details from GitHub.');
+            }
+
+            $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
+
+            $response = wp_remote_get($readme_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
+
+            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                $markdown = wp_remote_retrieve_body($response);
+
+                if (!empty($markdown)) {
+                    $parsedown = new \Parsedown();
+                    $post_content = $parsedown->text($markdown);
+                    $post_content = wp_kses_post(wp_slash($post_content));
+                } else {
+                    error_log('Markdown File Error: File content is empty. URL: ' . $readme_url);
+                    wp_die('Error: The Markdown file from GitHub is empty.');
+                }
+            } else {
+                error_log('Markdown Fetch Error: ' . print_r($response, true) . ' URL: ' . $readme_url);
+                wp_die('Error: Unable to retrieve the Markdown file from GitHub.');
             }
         } else {
-            error_log('Markdown Fetch Error: ' . print_r($response, true) . ' URL: ' . $readme_url);
-            wp_die('Error: Unable to retrieve the Markdown file from GitHub.');
+            wp_die('Error: Please specify the Markdown file name.');
         }
-    } else {
-        wp_die('Error: Please specify the Markdown file name.');
     }
-}
 
 
      // Handle "Upload Markdown file"
@@ -148,6 +145,7 @@ if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github
         $latest_release_url = $download_url;
     } else {
         $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
+        $support_url = "https://github.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/issues";
     }
 
     // Handle file upload for featured image
@@ -213,6 +211,7 @@ if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github
         if ($hosted_on_github === 'yes') {
             update_post_meta($post_id, 'github_username', $github_username);
             update_post_meta($post_id, 'github_repo', $github_repo);
+            update_post_meta($post_id, 'support_url', $support_url);
         } else {
             update_post_meta($post_id, 'download_url', $download_url);
         }
