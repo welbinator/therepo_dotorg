@@ -60,9 +60,17 @@ function handle_plugin_repo_submission() {
     // Handle "Import Markdown file from GitHub"
     if ($hosted_on_github === 'yes' && $landing_page_content === 'import_from_github') {
         if (!empty($markdown_file_name)) {
+            // Restrict file extensions
+            $allowed_extensions = ['md', 'html', 'htm', 'txt'];
+            $file_extension = strtolower(pathinfo($markdown_file_name, PATHINFO_EXTENSION));
+    
+            if (!in_array($file_extension, $allowed_extensions, true)) {
+                wp_die('Error: Unsupported file type. Please provide a Markdown (.md), HTML (.html), HTM (.htm), or text (.txt) file.');
+            }
+    
             $repo_api_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo);
             $repo_info = wp_remote_get($repo_api_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
-
+    
             if (!is_wp_error($repo_info) && wp_remote_retrieve_response_code($repo_info) === 200) {
                 $repo_data = json_decode(wp_remote_retrieve_body($repo_info), true);
                 $default_branch = $repo_data['default_branch'] ?? 'main';
@@ -70,14 +78,14 @@ function handle_plugin_repo_submission() {
                 error_log('GitHub API Error: ' . print_r($repo_info, true));
                 wp_die('Error: Unable to fetch repository details from GitHub.');
             }
-
+    
             $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
-
+    
             $response = wp_remote_get($readme_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
-
+    
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
                 $markdown = wp_remote_retrieve_body($response);
-
+    
                 if (!empty($markdown)) {
                     $parsedown = new \Parsedown();
                     $post_content = $parsedown->text($markdown);
@@ -94,6 +102,7 @@ function handle_plugin_repo_submission() {
             wp_die('Error: Please specify the Markdown file name.');
         }
     }
+    
 
 
      // Handle "Upload Markdown file"
@@ -426,6 +435,18 @@ function plugin_repo_submission_form_shortcode() {
         const nameLabel = document.querySelector('label[for="name"]');
         nameLabel.textContent = type === 'plugin_repo' ? 'Plugin Name' : 'Theme Name';
     });
+    document.getElementById('repo_submission_form').addEventListener('submit', function(event) {
+    const allowedExtensions = ['md', 'html', 'htm', 'txt'];
+    const markdownFileName = document.getElementById('markdown_file_name').value.trim();
+
+    if (markdownFileName) {
+        const fileExtension = markdownFileName.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(fileExtension)) {
+            event.preventDefault(); // Prevent form submission
+            alert('Error: Unsupported file type. Please provide a Markdown (.md), HTML (.html), HTM (.htm), or text (.txt) file.');
+        }
+    }
+});
 
     // Toggle Fields Based on Hosted on GitHub
     document.addEventListener('DOMContentLoaded', function () {
