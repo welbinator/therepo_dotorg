@@ -31,6 +31,18 @@ require_once plugin_dir_path(__FILE__) . 'functions.php';
 add_action('wp_enqueue_scripts', function () {
     global $post;
 
+     // Check if the current post is of type 'plugin_repo' or 'theme_repo'
+     if (is_singular(['plugin_repo', 'theme_repo'])) {
+        // Enqueue the new JavaScript file for the download button
+        wp_enqueue_script(
+            'download-button',
+            plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
+            array('jquery'),
+            THE_REPO_VERSION,
+            true
+        );
+    }
+
     // Check if the post contains the specific shortcode
     if (has_shortcode($post->post_content, 'plugin_repo_form')) { 
 
@@ -46,6 +58,14 @@ add_action('wp_enqueue_scripts', function () {
         wp_enqueue_script(
             'repo-categories',
             plugin_dir_url(__FILE__) . 'build/index.js',
+            array('jquery'),
+            THE_REPO_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'download-button',
+            plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
             array('jquery'),
             THE_REPO_VERSION,
             true
