@@ -1,4 +1,4 @@
-name: Create Release for The Repo Plugin
+name: Create Release
 
 on:
   workflow_dispatch:
@@ -31,18 +31,18 @@ jobs:
 
       # Rename directory to the desired folder name
       - name: Rename directory
-        run: mv temp_dir the-repo-plugin
+        run: mv temp_dir therepodotorg
 
       # Zip the packaged files
       - name: Create zip archive
         run: |
-          zip -r the-repo-plugin-${{ github.event.inputs.tag }}.zip the-repo-plugin
+          zip -r therepodotorg-${{ github.event.inputs.tag }}.zip therepodotorg
 
       # Create a new GitHub release with the packaged zip
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: the-repo-plugin-${{ github.event.inputs.tag }}.zip
+          files: therepodotorg-${{ github.event.inputs.tag }}.zip
           tag_name: ${{ github.event.inputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
