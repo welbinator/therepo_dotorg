@@ -27,7 +27,7 @@ jobs:
           cp -r build temp_dir/build
           cp -r vendor temp_dir/vendor
           cp -r functions.php temp_dir/
-          cp -r .env temp_dir/
+          cp -r assets temp_dir assets
 
       # Rename directory to the desired folder name
       - name: Rename directory
