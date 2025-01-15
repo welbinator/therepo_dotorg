@@ -3,8 +3,8 @@
  * Plugin Name: The Repo
  * Description: A plugin to manage and display plugins and themes from GitHub repositories.
  * Version: 1.0.9
- * Author: Your Name
- * Text Domain: the-repo
+ * Author: James Welbes
+ * Text Domain: the-repo-dot-org
  */
 
 namespace TheRepo;

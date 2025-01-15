@@ -79,7 +79,7 @@ function filter_plugins() {
                                         <?php the_title(); ?>
                                     </a>
                                 </h3>
-                                <span class="!px-2 !py-1 !text-xs !font-semibold !rounded <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
+                                <span class="!px-2 !py-1 !text-xs !font-semibold !rounded !whitespace-nowrap <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
                                     <?php echo esc_html($post_type); ?>
                                 </span>
                             </div>
