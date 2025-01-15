@@ -188,16 +188,26 @@ function handle_plugin_repo_submission() {
         }
     }
 
-     // Handle file upload for cover image
-     $cover_image_url = null;
-     if (!empty($_FILES['cover_image_url']['name'])) {
-         $upload = wp_handle_upload($_FILES['cover_image_url'], array('test_form' => false));
-         if ($upload && !isset($upload['error'])) {
-             $cover_image_url = $upload['url'];
-         } else {
-             wp_die('Error uploading cover image: ' . $upload['error']);
-         }
-     }
+     // Handle file upload for cover image or use a default image
+        $cover_image_url = null;
+        if (!empty($_FILES['cover_image_url']['name'])) {
+            $upload = wp_handle_upload($_FILES['cover_image_url'], array('test_form' => false));
+            if ($upload && !isset($upload['error'])) {
+                $cover_image_url = $upload['url'];
+            } else {
+                wp_die('Error uploading cover image: ' . $upload['error']);
+            }
+        } else {
+            // Use default cover image if no image is uploaded
+            $default_image_path = plugin_dir_url(dirname(dirname(__FILE__))) . 'assets/img/therepo-default-banner.jpg';
+            $cover_image_url = esc_url_raw($default_image_path);
+        }
+
+        // Add the cover image URL as post meta
+        if ($cover_image_url) {
+            update_post_meta($post_id, 'cover_image_url', $cover_image_url);
+        }
+
 
     // Determine post type and taxonomy
     $post_type = $type === 'plugin_repo' ? 'plugin_repo' : 'theme_repo';
@@ -390,7 +400,7 @@ function plugin_repo_submission_form_shortcode() {
 
                     <!-- Featured Image -->
                     <div>
-                        <label for="featured_image" class="block text-sm font-medium text-gray-700">Featured Image</label>
+                        <label for="featured_image" class="block text-sm font-medium text-gray-700">Profile Image</label>
                         <input 
                             type="file" 
                             name="featured_image" 

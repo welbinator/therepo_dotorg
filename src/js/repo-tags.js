@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    console.log('Initializing Select2 for Tags.');
+    
 
     if (typeof jQuery.fn.select2 !== 'function') {
         console.error('Select2 is not loaded.');
