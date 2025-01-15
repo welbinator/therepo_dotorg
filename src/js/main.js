@@ -171,23 +171,26 @@ document.addEventListener('DOMContentLoaded', function () {
     const githubFields = document.getElementById('github-fields');
     const downloadUrlField = document.getElementById('download-url-field');
 
-    function toggleFields() {
-        const selectedValue = document.querySelector('input[name="hosted_on_github"]:checked').value;
+    const hostedOnGitHub = document.getElementById('hosted_on_github');
 
-        if (selectedValue === 'yes') {
-            githubFields.style.display = 'flex';
-            downloadUrlField.style.display = 'none';
-            document.getElementById('github_username').setAttribute('required', 'required');
-            document.getElementById('github_repo').setAttribute('required', 'required');
-            document.getElementById('download_url').removeAttribute('required');
-        } else {
-            githubFields.style.display = 'none';
-            downloadUrlField.style.display = 'block';
-            document.getElementById('github_username').removeAttribute('required');
-            document.getElementById('github_repo').removeAttribute('required');
-            document.getElementById('download_url').setAttribute('required', 'required');
+        function toggleFields() {
+            const selectedValue = hostedOnGitHub.value; // Get the value of the select dropdown
+
+            if (selectedValue === 'yes') {
+                githubFields.style.display = 'flex';
+                downloadUrlField.style.display = 'none';
+                document.getElementById('github_username').setAttribute('required', 'required');
+                document.getElementById('github_repo').setAttribute('required', 'required');
+                document.getElementById('download_url').removeAttribute('required');
+            } else if (selectedValue === 'no') {
+                githubFields.style.display = 'none';
+                downloadUrlField.style.display = 'block';
+                document.getElementById('github_username').removeAttribute('required');
+                document.getElementById('github_repo').removeAttribute('required');
+                document.getElementById('download_url').setAttribute('required', 'required');
+            }
         }
-    }
+
 
     hostedOnGitHubRadios.forEach(function (radio) {
         radio.addEventListener('change', toggleFields);

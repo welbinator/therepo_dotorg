@@ -29,27 +29,34 @@ require_once plugin_dir_path(__FILE__) . 'functions.php';
 
 // Enqueue scripts and styles.
 add_action('wp_enqueue_scripts', function () {
-    // Enqueue CSS
-    wp_enqueue_style(
-        'the-repo-main-css', // Handle for the stylesheet
-        plugin_dir_url(__FILE__) . 'build/index.css', // Path to the CSS file
-        [], // Dependencies
-        THE_REPO_VERSION
-    );
+    global $post;
 
-    // Enqueue JS
-    wp_enqueue_script(
-        'repo-categories',
-        plugin_dir_url(__FILE__) . 'build/index.js', // Directly reference the correct directory
-        array('jquery'), 
-        THE_REPO_VERSION, 
-        true
-    );
+    // Check if the post contains the specific shortcode
+    if (has_shortcode($post->post_content, 'plugin_repo_form')) { 
 
-    // Localize the script
-    wp_localize_script('repo-categories', 'RepoCategories', array(
-        'ajax_url' => admin_url('admin-ajax.php'),
-    ));
+        // Enqueue CSS
+        wp_enqueue_style(
+            'the-repo-main-css',
+            plugin_dir_url(__FILE__) . 'build/index.css',
+            [],
+            THE_REPO_VERSION
+        );
+
+        // Enqueue JS
+        wp_enqueue_script(
+            'repo-categories',
+            plugin_dir_url(__FILE__) . 'build/index.js',
+            array('jquery'),
+            THE_REPO_VERSION,
+            true
+        );
+
+        // Localize the script
+        wp_localize_script('repo-categories', 'RepoCategories', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+        ));
+    }
 });
+
 
 
