@@ -55,21 +55,29 @@ function plugin_repo_grid_shortcode() {
                         ?>
                         <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
                             <div class="!p-6 !pb-12">
-                                <div class="!flex gap-4 !items-start space-x-4 !mb-4">
-                                    <a href="<?php the_permalink(); ?>" class="!rounded-md !block">
-                                        <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="!rounded-md !object-cover">
-                                    </a>
-                                    <div class="!flex-grow">
-                                        <div class="!flex !justify-between !items-start">
-                                            <a href="<?php the_permalink(); ?>" class="!text-xl !font-semibold !text-blue-500 hover:!underline">
-                                                <?php the_title(); ?>
-                                            </a>
-                                            <span class="!px-2 !py-1 !text-xs !font-semibold !rounded !whitespace-nowrap <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
-                                                <?php echo esc_html($post_type); ?>
-                                            </span>
-                                        </div>
+                            <div class="!flex gap-4 !items-start space-x-4 !mb-4">
+                                <a href="<?php the_permalink(); ?>" class="!rounded-md !block">
+                                    <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="!rounded-md !object-cover">
+                                </a>
+                                <div class="!flex-grow">
+                                    <div class="!flex !justify-between !items-start">
+                                        <a href="<?php the_permalink(); ?>" class="!text-xl !font-semibold !text-blue-500 hover:!underline">
+                                            <?php the_title(); ?>
+                                        </a>
+                                        <span class="!px-2 !py-1 !text-xs !font-semibold !rounded !whitespace-nowrap <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
+                                            <?php echo esc_html($post_type); ?>
+                                        </span>
                                     </div>
+                                    <p class="!text-gray-500 !mt-2">
+                                        Author: 
+                                        <a href="<?php echo esc_url(get_author_posts_url(get_the_author_meta('ID'), get_the_author_meta('user_login'))); ?>" class="!text-blue-500 hover:!underline">
+                                            <?php echo esc_html(get_the_author_meta('nickname')); ?>
+                                        </a>
+                                    </p>
                                 </div>
+                            </div>
+
+
                                 <p class="!text-gray-600 !mb-4"><?php echo esc_html(wp_trim_words(get_the_content(), 20)); ?></p>
                                 <div class="!flex flex-wrap !justify-between !items-center github-download-button">
                                 <div class="!flex !space-x-2 !gap-3 !mb-5 flex-col">

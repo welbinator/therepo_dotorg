@@ -44,7 +44,7 @@ add_action('wp_enqueue_scripts', function () {
     }
 
     // Check if the post contains the specific shortcode
-    if (has_shortcode($post->post_content, 'plugin_repo_form')) { 
+    if (has_shortcode($post->post_content, 'plugin_repo_form')) {
 
         // Enqueue CSS
         wp_enqueue_style(
