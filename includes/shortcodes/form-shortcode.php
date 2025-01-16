@@ -262,7 +262,7 @@ add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle
 // Form shortcode
 function plugin_repo_submission_form_shortcode() {
     if (!is_user_logged_in()) {
-        return '<p>You must be logged in to submit a plugin or theme. <a href="' . wp_login_url(get_permalink()) . '">Log in</a> or <a href="' . wp_registration_url() . '">Register</a>.</p>';
+        return '<p>You must be logged in to submit a plugin or theme. <a href="/login">Log in</a> or <a href="/register">Register</a>.</p>';
     }
     ob_start(); ?>
     <section class="py-16 bg-white">
