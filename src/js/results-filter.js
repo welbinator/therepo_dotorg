@@ -1,4 +1,5 @@
 // Event listeners for search and filters
+const grid = document.getElementById('plugin-repo-grid');
 const searchField = document.getElementById('plugin-repo-search');
 const typeFilter = document.getElementById('plugin-repo-type-filter');
 const categoryFilter = document.getElementById('plugin-repo-category-filter');
