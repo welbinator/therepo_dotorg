@@ -2,7 +2,7 @@
 /**
  * Plugin Name: The Repo
  * Description: A plugin to manage and display plugins and themes from GitHub repositories.
- * Version: 1.1.1
+ * Version: 1.1.2
  * Author: James Welbes
  * Text Domain: the-repo-dot-org
  */
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define the plugin version as a constant.
-define('THE_REPO_VERSION', '1.1.1');
+define('THE_REPO_VERSION', '1.1.2');
 
 // Include necessary files.
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
