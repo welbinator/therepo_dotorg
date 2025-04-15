@@ -10,6 +10,7 @@ function filter_plugins() {
 
     $args = [
         'post_type' => ['plugin_repo', 'theme_repo'],
+        'post_status' => ['publish', 'future'], // 👈 Add this
         'posts_per_page' => -1,
         's' => $search,
     ];
