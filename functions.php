@@ -2,6 +2,29 @@
 
 namespace TheRepo\Functions;
 
+add_action('wp_ajax_get_release_data', __NAMESPACE__ . '\\ajax_get_release_data');
+add_action('wp_ajax_nopriv_get_release_data', __NAMESPACE__ . '\\ajax_get_release_data');
+
+function ajax_get_release_data() {
+    $url = isset($_GET['url']) ? esc_url_raw($_GET['url']) : '';
+
+    if (empty($url)) {
+        wp_send_json_error(['message' => 'Missing GitHub API URL']);
+    }
+
+    $cache_key = 'latest_version_' . md5($url);
+    $data = fetch_github_data($url, $cache_key);
+
+    if (!$data || !isset($data['assets'][0]['browser_download_url'])) {
+        wp_send_json_error(['message' => 'No assets found']);
+    }
+
+    wp_send_json_success([
+        'download_url' => $data['assets'][0]['browser_download_url'],
+    ]);
+}
+
+
 function allow_subscribers_to_edit_own_posts() {
     $subscriber_role = get_role('subscriber');
     if ($subscriber_role) {
@@ -72,6 +95,7 @@ add_action('admin_init', function () {
 });
 
 function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
+    // error_log("fetching data");
     delete_transient($cache_key);
     $cached_data = get_transient($cache_key);
 
@@ -87,7 +111,11 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     // Add token if defined in wp-config.php
     if (defined('GITHUB_API_TOKEN') && GITHUB_API_TOKEN) {
         $headers['Authorization'] = 'token ' . GITHUB_API_TOKEN;
+        // error_log('✅ GitHub token detected and being used.');
+    } else {
+        error_log('❌ GitHub token not found or empty!');
     }
+    
 
     $response = wp_remote_get($url, [
         'headers' => $headers,
@@ -128,7 +156,6 @@ function display_latest_version($atts) {
             $days_ago = floor((time() - $published_time) / DAY_IN_SECONDS);
 
             if ($days_ago <= 7) {
-                error_log("recently updated!");
                 $tooltip = "Updated {$days_ago} day" . ($days_ago !== 1 ? 's' : '') . " ago!";
                 $recent_icon = ' <span title="' . esc_attr($tooltip) . '" style="cursor: help;"><sup>✨</sup></span>';
             }

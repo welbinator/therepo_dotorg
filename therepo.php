@@ -33,6 +33,7 @@ add_action('wp_enqueue_scripts', function () {
 
      // Check if the current post is of type 'plugin_repo' or 'theme_repo'
      if (is_singular(['plugin_repo', 'theme_repo'])) {
+
         // Enqueue the new JavaScript file for the download button
         wp_enqueue_script(
             'download-button',
@@ -44,8 +45,10 @@ add_action('wp_enqueue_scripts', function () {
     }
 
     // Check if the post contains the specific shortcode
-    if (has_shortcode($post->post_content, 'plugin_repo_form')) {
-
+    if (
+        has_shortcode($post->post_content, 'plugin_repo_form') ||
+        has_shortcode($post->post_content, 'plugin_repo_grid')
+    ) {
         // Enqueue CSS
         wp_enqueue_style(
             'the-repo-main-css',
