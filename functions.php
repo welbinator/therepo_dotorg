@@ -74,33 +74,39 @@ add_action('admin_init', function () {
 function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     delete_transient($cache_key);
     $cached_data = get_transient($cache_key);
-   
+
     if ($cached_data !== false) {
         return $cached_data;
     }
 
+    $headers = [
+        'Accept'     => 'application/vnd.github.v3+json',
+        'User-Agent' => 'WordPress GitHub Fetcher',
+    ];
+
+    // Add token if defined in wp-config.php
+    if (defined('GITHUB_API_TOKEN') && GITHUB_API_TOKEN) {
+        $headers['Authorization'] = 'token ' . GITHUB_API_TOKEN;
+    }
+
     $response = wp_remote_get($url, [
-        'headers' => [
-            'Accept' => 'application/vnd.github.v3+json',
-            'User-Agent' => 'WordPress GitHub Fetcher',
-            
-        ],
+        'headers' => $headers,
     ]);
-    
+
     if (is_wp_error($response)) {
         error_log('GitHub API Error: ' . $response->get_error_message());
         return null;
     }
-    
+
     $data = json_decode(wp_remote_retrieve_body($response), true);
-    
-    
+
     if (!empty($data)) {
         set_transient($cache_key, $data, $expiration);
     }
 
     return $data;
 }
+
 
 function display_latest_version($atts) {
     $post_id = get_the_ID();
@@ -114,12 +120,28 @@ function display_latest_version($atts) {
     $data = fetch_github_data($github_url, $cache_key);
 
     if (isset($data['tag_name'])) {
-        return '<p>' . esc_html($data['tag_name']) . '</p>';
+        $version = esc_html($data['tag_name']);
+        $recent_icon = '';
+
+        if (isset($data['published_at'])) {
+            $published_time = strtotime($data['published_at']);
+            $days_ago = floor((time() - $published_time) / DAY_IN_SECONDS);
+
+            if ($days_ago <= 7) {
+                error_log("recently updated!");
+                $tooltip = "Updated {$days_ago} day" . ($days_ago !== 1 ? 's' : '') . " ago!";
+                $recent_icon = ' <span title="' . esc_attr($tooltip) . '" style="cursor: help;"><sup>✨</sup></span>';
+            }
+        }
+
+        return "<p>{$version}{$recent_icon}</p>";
     }
 
     return 'Version information could not be retrieved.';
 }
 add_shortcode('latest_version', __NAMESPACE__ . '\\display_latest_version');
+
+
 
 function fetch_latest_release_date($atts) {
     $post_id = get_the_ID();
