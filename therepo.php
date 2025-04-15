@@ -66,13 +66,13 @@ add_action('wp_enqueue_scripts', function () {
             true
         );
 
-        wp_enqueue_script(
-            'download-button',
-            plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
-            array('jquery'),
-            THE_REPO_VERSION,
-            true
-        );
+        // wp_enqueue_script(
+        //     'download-button',
+        //     plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
+        //     array('jquery'),
+        //     THE_REPO_VERSION,
+        //     true
+        // );
 
         // Localize the script
         wp_localize_script('repo-categories', 'RepoCategories', array(
