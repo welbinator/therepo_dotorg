@@ -53,25 +53,48 @@ function plugin_repo_grid_shortcode() {
                         $version_badge = '';
                         $version_text = '';
                         $free_or_pro = get_post_meta(get_the_ID(), 'free_or_pro', true);
+                        
 
                         if (!empty($latest_release_url) && filter_var($latest_release_url, FILTER_VALIDATE_URL)) {
                             $cache_key = 'latest_version_' . md5($latest_release_url);
                             $data = fetch_github_data($latest_release_url, $cache_key);
-
+                        
                             if (isset($data['tag_name'])) {
                                 $version_text = esc_html($data['tag_name']);
                             }
-
+                        
                             if (isset($data['published_at'])) {
-                                $published_time = strtotime($data['published_at']);
-                                $days_ago = floor((time() - $published_time) / DAY_IN_SECONDS);
+                                $timezone_string = get_option('timezone_string') ?: 'UTC';
+                                $local_tz = new \DateTimeZone($timezone_string);
 
-                                if ($days_ago <= 7) {
-                                    $tooltip = "Updated {$days_ago} day" . ($days_ago !== 1 ? 's' : '') . " ago!";
+                                $published_date = new \DateTime($data['published_at']);
+                                $published_date->setTimezone($local_tz);
+
+                                $now = new \DateTime('now', $local_tz);
+                                $today = $now->format('Y-m-d');
+                                $yesterday = $now->modify('-1 day')->format('Y-m-d');
+                                $published_day = $published_date->format('Y-m-d');
+
+                                error_log('Published date (local): ' . $published_day);
+                                error_log('Today: ' . $today);
+                                error_log('Yesterday: ' . $yesterday);
+
+                                if ($published_day >= date('Y-m-d', strtotime('-7 days'))) {
+                                    if ($published_day === $today) {
+                                        $tooltip = "Updated today!";
+                                    } elseif ($published_day === $yesterday) {
+                                        $tooltip = "Updated yesterday!";
+                                    } else {
+                                        $days_ago = (new \DateTime($today))->diff(new \DateTime($published_day))->days;
+                                        $tooltip = "Updated {$days_ago} days ago!";
+                                    }
+
                                     $version_badge = ' <span title="' . esc_attr($tooltip) . '" style="cursor: help;"><sup>✨</sup></span>';
                                 }
+
                             }
                         }
+                        
                         ?>
                         <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden relative">
                             <div class="!p-6 !pb-12">
