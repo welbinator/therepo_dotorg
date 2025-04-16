@@ -2,7 +2,7 @@
 /**
  * Plugin Name: The Repo
  * Description: A plugin to manage and display plugins and themes from GitHub repositories.
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: James Welbes
  * Text Domain: the-repo-dot-org
  */
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define the plugin version as a constant.
-define('THE_REPO_VERSION', '1.1.2');
+define('THE_REPO_VERSION', '1.1.3');
 
 // Include necessary files.
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
@@ -33,6 +33,7 @@ add_action('wp_enqueue_scripts', function () {
 
      // Check if the current post is of type 'plugin_repo' or 'theme_repo'
      if (is_singular(['plugin_repo', 'theme_repo'])) {
+
         // Enqueue the new JavaScript file for the download button
         wp_enqueue_script(
             'download-button',
@@ -44,8 +45,10 @@ add_action('wp_enqueue_scripts', function () {
     }
 
     // Check if the post contains the specific shortcode
-    if (has_shortcode($post->post_content, 'plugin_repo_form')) {
-
+    if (
+        has_shortcode($post->post_content, 'plugin_repo_form') ||
+        has_shortcode($post->post_content, 'plugin_repo_grid')
+    ) {
         // Enqueue CSS
         wp_enqueue_style(
             'the-repo-main-css',
@@ -63,13 +66,13 @@ add_action('wp_enqueue_scripts', function () {
             true
         );
 
-        wp_enqueue_script(
-            'download-button',
-            plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
-            array('jquery'),
-            THE_REPO_VERSION,
-            true
-        );
+        // wp_enqueue_script(
+        //     'download-button',
+        //     plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
+        //     array('jquery'),
+        //     THE_REPO_VERSION,
+        //     true
+        // );
 
         // Localize the script
         wp_localize_script('repo-categories', 'RepoCategories', array(

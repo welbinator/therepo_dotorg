@@ -16,12 +16,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (apiUrl.startsWith('https://api.github.com/repos')) {
             event.preventDefault();
 
-            fetch(apiUrl, {
-                headers: {
-                    Accept: 'application/vnd.github.v3+json',
-                    'User-Agent': 'GitHub-Latest-Release-Fetcher',
-                },
-            })
+            // Use WordPress proxy endpoint instead of GitHub API directly
+            const proxyUrl = `/wp-admin/admin-ajax.php?action=get_release_data&url=${encodeURIComponent(apiUrl)}`;
+
+            fetch(proxyUrl)
                 .then((response) => {
                     if (!response.ok) {
                         throw new Error(`Network error: ${response.statusText}`);
@@ -29,12 +27,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     return response.json();
                 })
                 .then((data) => {
-                    if (data?.assets?.length > 0) {
-                        const downloadUrl = data.assets[0].browser_download_url;
-                        window.location.href = downloadUrl;
+                    if (data.success && data.data?.download_url) {
+                        window.location.href = data.data.download_url;
                     } else {
                         alert('No downloadable assets found in the latest release.');
-                        console.error('Debug: No assets available in the release data.');
+                        console.error('Debug: No assets available in the response data.');
                     }
                 })
                 .catch((error) => {

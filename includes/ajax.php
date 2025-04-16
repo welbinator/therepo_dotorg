@@ -10,6 +10,7 @@ function filter_plugins() {
 
     $args = [
         'post_type' => ['plugin_repo', 'theme_repo'],
+        'post_status' => ['publish', 'future'], // 👈 Add this
         'posts_per_page' => -1,
         's' => $search,
     ];
@@ -28,7 +29,7 @@ function filter_plugins() {
         ];
     }
 
-    error_log('Filter Plugins Args: ' . print_r($args, true));
+    // error_log('Filter Plugins Args: ' . print_r($args, true));
 
     $query = new \WP_Query($args);
 
@@ -153,7 +154,7 @@ add_action('wp_ajax_get_submission_data', function () {
         'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($submission_id)) ?: '',
     ];
 
-    error_log('Submission Data: ' . print_r($data, true));
+    // error_log('Submission Data: ' . print_r($data, true));
     wp_send_json_success($data);
 });
 
