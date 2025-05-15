@@ -8,7 +8,7 @@ function plugin_repo_grid_shortcode() {
     ob_start();
     ?>
     <section class="!py-16">
-        <div class="!container !mx-auto !px-4">
+        <div class="!mx-auto !px-4 max-w-[1209px]">
             
             <div class="!mb-8 !flex flex-col md:flex-row !justify-between !items-center gap-4">
                 <div class="!relative !w-full md:w-1/3">
