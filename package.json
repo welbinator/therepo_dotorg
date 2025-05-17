@@ -7,13 +7,16 @@
     "build": "wp-scripts build",
     "build:main": "wp-scripts build src/index.js --output-path=build --output-filename=index.js",
     "build:download-button": "wp-scripts build src/js/download-button.js --output-path=assets/js --output-filename=download-button.js",
-    "build:all": "npm run build:main && npm run build:download-button"
+    "build:all": "npm run build:main && npm run build:download-button",
+    "tailwind": "npx @tailwindcss/cli -i ./assets/css/tailwind.css -o ./assets/css/style.css --watch"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "select2": "^4.1.0-rc.0"
+    "@tailwindcss/cli": "^4.1.7",
+    "select2": "^4.1.0-rc.0",
+    "tailwindcss": "^4.1.7"
   },
   "devDependencies": {
     "@wordpress/scripts": "^30.7.0"

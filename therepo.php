@@ -49,6 +49,14 @@ add_action('wp_enqueue_scripts', function () {
         has_shortcode($post->post_content, 'plugin_repo_form') ||
         has_shortcode($post->post_content, 'plugin_repo_grid')
     ) {
+
+        wp_enqueue_style(
+			'eventswp-frontend',
+			plugin_dir_url(__FILE__)  . 'assets/css/style.css',
+			[],
+			THE_REPO_VERSION
+		);
+        
         // Enqueue CSS
         wp_enqueue_style(
             'the-repo-main-css',
@@ -65,14 +73,6 @@ add_action('wp_enqueue_scripts', function () {
             THE_REPO_VERSION,
             true
         );
-
-        // wp_enqueue_script(
-        //     'download-button',
-        //     plugin_dir_url(__FILE__) . 'assets/js/download-button.js',
-        //     array('jquery'),
-        //     THE_REPO_VERSION,
-        //     true
-        // );
 
         // Localize the script
         wp_localize_script('repo-categories', 'RepoCategories', array(
