@@ -15,14 +15,34 @@ function ajax_get_release_data() {
     $cache_key = 'latest_version_' . md5($url);
     $data = fetch_github_data($url, $cache_key);
 
-    if (!$data || !isset($data['assets'][0]['browser_download_url'])) {
-        wp_send_json_error(['message' => 'No assets found']);
+    if (!$data || !isset($data['tag_name'])) {
+        wp_send_json_error(['message' => 'Invalid release data']);
     }
 
-    wp_send_json_success([
-        'download_url' => $data['assets'][0]['browser_download_url'],
-    ]);
+    // First: check for manually uploaded assets (with the cube icon)
+    if (!empty($data['assets'][0]['browser_download_url'])) {
+        wp_send_json_success([
+            'download_url' => $data['assets'][0]['browser_download_url'],
+        ]);
+    }
+
+    // Fallback: construct the URL for auto-generated source code ZIP
+    if (isset($data['html_url'])) {
+        preg_match('#github\.com/([^/]+/[^/]+)/#', $data['html_url'], $matches);
+        if (!empty($matches[1])) {
+            $repo = $matches[1]; // e.g., user/repo
+            $tag = $data['tag_name'];
+            $source_zip_url = "https://github.com/{$repo}/archive/refs/tags/{$tag}.zip";
+
+            wp_send_json_success([
+                'download_url' => $source_zip_url,
+            ]);
+        }
+    }
+
+    wp_send_json_error(['message' => 'No downloadable assets or source zip found.']);
 }
+
 
 
 function allow_subscribers_to_edit_own_posts() {
@@ -31,9 +51,11 @@ function allow_subscribers_to_edit_own_posts() {
         $subscriber_role->add_cap('edit_posts');
         $subscriber_role->add_cap('edit_published_posts');
         $subscriber_role->add_cap('upload_files');
+        $subscriber_role->add_cap('publish_posts');
     }
 }
 add_action('init', __NAMESPACE__ . '\\allow_subscribers_to_edit_own_posts');
+
 
 function restrict_subscriber_posts($query) {
     if (!is_admin()) {
@@ -53,7 +75,7 @@ add_action('pre_get_posts', __NAMESPACE__ . '\\restrict_subscriber_posts');
 function restrict_subscriber_capabilities() {
     $subscriber_role = get_role('subscriber');
     if ($subscriber_role) {
-        $subscriber_role->remove_cap('publish_posts');
+        // $subscriber_role->remove_cap('publish_posts');
         $subscriber_role->remove_cap('delete_posts');
     }
 }
