@@ -270,7 +270,7 @@ function github_star_count_shortcode($atts) {
 
     if (isset($data['stargazers_count'])) {
         $stars = number_format($data['stargazers_count']);
-        $star_link = "https://github.com/{$github_owner}/{$github_repo}/stargazers";
+        $star_link = "https://github.com/{$github_owner}/{$github_repo}";
 
         return '<div class="github-star-widget">
                     <p><strong>' . esc_html($stars) . '</strong> ⭐</p>
