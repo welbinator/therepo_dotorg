@@ -26,6 +26,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/form-shortcode.php
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/user-submissions-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/previous-releases.php';
 require_once plugin_dir_path(__FILE__) . 'functions.php';
+require_once plugin_dir_path(__FILE__) . 'includes/api/public-api.php';
+
 
 
 // Enqueue scripts and styles that can be determined early
