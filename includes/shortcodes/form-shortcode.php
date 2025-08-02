@@ -23,6 +23,8 @@ function handle_plugin_repo_submission() {
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', (array) $_POST['categories']) : [];
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', (array) $_POST['tags']) : [];
     $post_content = 'Add your plugin/theme information here!';
+    $short_description = isset($_POST['short_description']) ? sanitize_text_field($_POST['short_description']) : '';
+
 
     // General field validation
     if (empty($type) || empty($name)) {
@@ -218,6 +220,7 @@ function handle_plugin_repo_submission() {
     $post_id = wp_insert_post([
         'post_title'   => $name,
         'post_content' => $post_content,
+        'post_excerpt' => $short_description, // <-- Added this line
         'post_type'    => $post_type,
         'post_status'  => 'pending',
         'post_author'  => get_current_user_id(),
@@ -265,75 +268,73 @@ function plugin_repo_submission_form_shortcode() {
         return '<p>You must be logged in to submit a plugin or theme. <a href="/login">Log in</a> or <a href="/register">Register</a>.</p>';
     }
     ob_start(); ?>
-    <section class="py-16 bg-white">
-        <div class="container mx-auto px-4">
-            <div class="max-w-2xl mx-auto">
-                <form method="POST" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="space-y-6" id="repo_submission_form">
+            <div class="submission-form__wrapper">
+                <form method="POST" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="submission-form__form" id="repo_submission_form">
                     <input type="hidden" name="action" value="plugin_repo_submission">
                     <?php wp_nonce_field('plugin_repo_submission', 'plugin_repo_nonce'); ?>
                     
                     <!-- Type -->
-                    <div>
-                        <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-                        <select name="type" id="type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="submission-form__field">
+                        <label for="type" class="submission-form__label">Type</label>
+                        <select name="type" id="type" required class="submission-form__select">
                             <option value="plugin_repo">Plugin</option>
                             <option value="theme">Theme</option>
                         </select>
                     </div>
 
                     <!-- Name -->
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700">Plugin/Theme Name</label>
+                    <div class="submission-form__field">
+                        <label for="name" class="submission-form__label">Plugin/Theme Name</label>
                         <input 
                             type="text" 
                             name="name" 
                             id="name" 
                             placeholder="Enter name" 
                             required 
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="submission-form__input"
                         />
                     </div>
 
                     <!-- Hosted on GitHub? -->
-                    <div>
-                        <label for="hosted_on_github" class="block text-sm font-medium text-gray-700">Hosted on GitHub?</label>
-                        <select name="hosted_on_github" id="hosted_on_github" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="submission-form__field">
+                        <label for="hosted_on_github" class="submission-form__label">Hosted on GitHub?</label>
+                        <select name="hosted_on_github" id="hosted_on_github" class="submission-form__select">
                             <option value="yes" selected>Yes</option>
                             <option value="no">No</option>
                         </select>
                     </div>
 
                     <!-- GitHub Username and Repo -->
-                    <div id="github-fields" class="github-wrapper flex gap-5">
-                        <div class="github-column">
-                            <label for="github_username" class="block text-sm font-medium text-gray-700">GitHub Username</label>
+                    <div id="github-fields" class="submission-form__github">
+                        <div class="submission-form__github-column">
+                            <label for="github_username" class="submission-form__label">GitHub Username</label>
                             <input 
                                 type="text" 
                                 name="github_username" 
                                 id="github_username" 
                                 placeholder="GitHub username" 
                                 required 
-                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                class="submission-form__input"
                             />
                         </div>
 
                         <div class="github-column">
-                            <label for="github_repo" class="block text-sm font-medium text-gray-700">GitHub Repo</label>
+                            <label for="github_repo" class="submission-form__label">GitHub Repo</label>
                             <input 
                                 type="text" 
                                 name="github_repo" 
                                 id="github_repo" 
                                 placeholder="GitHub repository name" 
                                 required 
-                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                class="submission-form__input"
                             />
                         </div>
                     </div>
 
                     <!-- Landing Page Content -->
                     <div id="landing-page-field">
-                        <label for="landing_page_content" class="block text-sm font-medium text-gray-700">Landing Page Content</label>
-                        <select name="landing_page_content" id="landing_page_content" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <label for="landing_page_content" class="submission-form__label">Landing Page Content</label>
+                        <select name="landing_page_content" id="landing_page_content" class="submission-form__input">
                             <option value="import_from_github" selected>Import markdown/txt file from GitHub</option>
                             <option value="upload_markdown">Upload markdown/html/txt file</option>
                             <option value="manual_edit">Edit manually using block editor</option>
@@ -343,99 +344,111 @@ function plugin_repo_submission_form_shortcode() {
                     <div id="markdown-fields">
                         <!-- Markdown File Name -->
                         <div id="markdown-file-name-field">
-                            <label for="markdown_file_name" class="block text-sm font-medium text-gray-700">Markdown File Name</label>
+                            <label for="markdown_file_name" class="submission-form__label">Markdown File Name</label>
                             <input 
                                 type="text" 
                                 name="markdown_file_name" 
                                 id="markdown_file_name" 
                                 placeholder="Enter markdown file name (e.g., readme.md)" 
-                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                class="submission-form__input"
                             />
                         </div>
 
 
                         <!-- Markdown File Upload -->
-                        <div id="upload-markdown-field" style="display:none;">
-                            <label for="markdown_file" class="block text-sm font-medium text-gray-700">Upload Markdown File</label>
+                        <div id="upload-markdown-field" style="display:none;" class="submission-form__field">
+                            <label for="markdown_file" class="submission-form__label">Upload Markdown File</label>
                             <input 
                                 type="file" 
                                 name="markdown_file" 
                                 id="markdown_file" 
                                  accept=".md,.html,.htm,.txt"
-                                class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                class="submission-form__input submission-form__input--file"
                             />
                         </div>
                     </div>
 
                     <!-- Download URL -->
-                    <div id="download-url-field" style="display: none;">
-                        <label for="download_url" class="block text-sm font-medium text-gray-700">Download URL</label>
+                    <div id="download-url-field" style="display: none;" class="submission-form__field">
+                        <label for="download_url" class="submission-form__label">Download URL</label>
                         <input 
                             type="url" 
                             name="download_url" 
                             id="download_url" 
                             placeholder="Enter download URL" 
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="submission-form__input"
                         />
-                        <p class="text-sm text-gray-500 mt-1">Provide the direct URL to download your plugin/theme.</p>
+                        <p class="submission-form__hint">Provide the direct URL to download your plugin/theme.</p>
+                    </div>
+
+                    <!-- Short Description -->
+                    <div class="submission-form__field">
+                        <label for="short_description" class="submission-form__label">Short Description</label>
+                        <textarea 
+                            name="short_description" 
+                            id="short_description" 
+                            rows="3" 
+                            placeholder="Write a short description of your plugin or theme"
+                            class="submission-form__input"
+                            required
+                        ></textarea>
                     </div>
 
                     <!-- Categories -->
-                    <div>
-                        <label for="categories" class="block text-sm font-medium text-gray-700">Categories</label>
-                        <select name="categories[]" id="categories" multiple="multiple" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="submission-form__field">
+                        <label for="categories" class="submission-form__label">Categories</label>
+                        <select name="categories[]" id="categories" multiple="multiple" class="submission-form__select">
                             <!-- Dynamic options will be loaded via Select2 -->
                         </select>
-                        <p class="text-sm text-gray-500 mt-1">Start typing to search for existing categories or add new ones.</p>
+                        <p class="submission-form__hint">Start typing to search for existing categories or add new ones.</p>
                     </div>
 
                     <!-- Tags -->
-                    <div>
-                        <label for="tags" class="block text-sm font-medium text-gray-700">Tags</label>
-                        <select name="tags[]" id="tags" multiple="multiple" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <div class="submission-form__field">
+                        <label for="tags" class="submission-form__label">Tags</label>
+                        <select name="tags[]" id="tags" multiple="multiple" class="submission-form__select">
                             <!-- Dynamic options will be loaded via Select2 -->
                         </select>
-                        <p class="text-sm text-gray-500 mt-1">Start typing to search for existing tags or add new ones.</p>
+                        <p class="submission-form__hint">Start typing to search for existing tags or add new ones.</p>
                     </div>
 
                     <!-- Featured Image -->
-                    <div>
-                        <label for="featured_image" class="block text-sm font-medium text-gray-700">Profile Image</label>
+                    <div class="submission-form__field">
+                        <label for="featured_image" class="submission-form__label">Profile Image</label>
                         <input 
                             type="file" 
                             name="featured_image" 
                             id="featured_image" 
                             accept="image/*" 
                             required 
-                            class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="submission-form__input submission-form__input--file"
                         />
-                        <p class="text-sm text-gray-500 mt-1">Profile picture should be a square or a circle</p>
+                        <p class="submission-form__hint">Profile picture should be a square or a circle</p>
                     </div>
 
                     <!-- Cover Image -->
-                    <div>
-                        <label for="cover_image_url" class="block text-sm font-medium text-gray-700">Cover Image</label>
+                    <div class="submission-form__field">
+                        <label for="cover_image_url" class="submission-form__label">Cover Image</label>
                         <input 
                             type="file" 
                             name="cover_image_url" 
                             id="cover_image_url" 
                             accept="image/jpg,image/jpeg,image/png" 
-                            class="mt-1 block w-full text-sm text-gray-500 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="submission-form__input submission-form__input--file"
                         />
-                        <p class="text-sm text-gray-500 mt-1">16:4 aspect ratio</p>
+                        <p class="submission-form__hint">16:4 aspect ratio</p>
                     </div>
 
                     <!-- Submit Button -->
                     <button 
                         type="submit" 
-                        class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
+                        class="submission-form__submit"
+                        >
                         Submit Plugin/Theme
                     </button>
                 </form>
             </div>
-        </div>
-    </section>
+        
 
     <!-- JavaScript -->
     <script>

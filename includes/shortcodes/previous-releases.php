@@ -31,7 +31,7 @@ function previous_releases() {
     ob_start();
     ?>
     <div class="previous-releases">
-        <h3>Previous Versions</h3>
+        
         <ul class="space-y-2 !list-none !m-0">
             <?php
             // Skip the first release (the latest one already handled by the magic button)

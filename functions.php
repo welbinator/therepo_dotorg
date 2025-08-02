@@ -183,7 +183,8 @@ function display_latest_version($atts) {
             }
         }
 
-        return "<p>{$version}{$recent_icon}</p>";
+        // return "<p>{$recent_icon}{$version}</p>";
+        return "<p>{$version}</p>";
     }
 
     return 'Version information could not be retrieved.';
@@ -273,7 +274,7 @@ function github_star_count_shortcode($atts) {
         $star_link = "https://github.com/{$github_owner}/{$github_repo}";
 
         return '<div class="github-star-widget">
-                    <p><strong>' . esc_html($stars) . '</strong> ⭐</p>
+                    <p>⭐' . esc_html($stars) . ' </p>
                     <a href="' . esc_url($star_link) . '" target="_blank" rel="noopener" class="github-star-button">Star on GitHub</a>
                 </div>';
     }
@@ -283,4 +284,32 @@ function github_star_count_shortcode($atts) {
 add_shortcode('github_star_count', __NAMESPACE__ . '\\github_star_count_shortcode');
 
 
+// function log_plugin_repo_meta_keys_to_error_log() {
+//     global $wpdb;
+
+//     $post_type = 'plugin_repo';
+
+//     $meta_keys = $wpdb->get_col(
+//         $wpdb->prepare(
+//             "
+//             SELECT DISTINCT pm.meta_key
+//             FROM {$wpdb->postmeta} pm
+//             INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+//             WHERE p.post_type = %s
+//             ",
+//             $post_type
+//         )
+//     );
+
+//     if ( ! empty( $meta_keys ) ) {
+//         error_log( "Meta keys for post type '{$post_type}':" );
+//         foreach ( $meta_keys as $key ) {
+//             error_log( $key );
+//         }
+//     } else {
+//         error_log( "No meta keys found for post type '{$post_type}'." );
+//     }
+// }
+
+// add_action( 'admin_init',  __NAMESPACE__ . '\\log_plugin_repo_meta_keys_to_error_log' );
 

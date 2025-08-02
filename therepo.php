@@ -46,6 +46,7 @@ add_action('wp_enqueue_scripts', function () {
     ) {
         $should_enqueue = true;
     }
+$should_enqueue = true;
 
     if ($should_enqueue) {
         wp_enqueue_style(
