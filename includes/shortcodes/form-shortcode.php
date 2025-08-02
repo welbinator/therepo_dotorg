@@ -14,7 +14,8 @@ function handle_plugin_repo_submission() {
     // Gather input values with sanitization
     $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : '';
     $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-    $hosted_on_github = isset($_POST['hosted_on_github']) ? sanitize_text_field($_POST['hosted_on_github']) : '';
+    $hosting_platform = isset($_POST['hosting_platform']) ? sanitize_text_field($_POST['hosting_platform']) : '';
+    $wporg_slug = isset($_POST['wporg_slug']) ? sanitize_text_field($_POST['wporg_slug']) : '';
     $github_username = isset($_POST['github_username']) ? sanitize_text_field($_POST['github_username']) : '';
     $github_repo = isset($_POST['github_repo']) ? sanitize_text_field($_POST['github_repo']) : '';
     $markdown_file_name = isset($_POST['markdown_file_name']) ? sanitize_text_field($_POST['markdown_file_name']) : '';
@@ -24,6 +25,7 @@ function handle_plugin_repo_submission() {
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', (array) $_POST['tags']) : [];
     $post_content = 'Add your plugin/theme information here!';
     $short_description = isset($_POST['short_description']) ? sanitize_text_field($_POST['short_description']) : '';
+    
 
 
     // General field validation
@@ -146,7 +148,7 @@ function handle_plugin_repo_submission() {
 
 
     // Handle "Not hosted on GitHub" and fallback
-    if ($hosted_on_github === 'no') {
+    if ($hosting_platform === 'other') {
         if (empty($post_content)) {
             wp_die('Error: You must upload a valid file to populate the post content.');
         }
@@ -154,10 +156,16 @@ function handle_plugin_repo_submission() {
             wp_die('Error: Download URL is required when not hosted on GitHub.');
         }
         $latest_release_url = $download_url;
-    } else {
+    } elseif ($hosting_platform === 'github') {
         $latest_release_url = "https://api.github.com/repos/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/releases/latest";
         $support_url = "https://github.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/issues";
+    } elseif ($hosting_platform === 'wordpress') {
+    if (empty($wporg_slug)) {
+        wp_die('Error: Please enter the WordPress.org plugin slug.');
     }
+    $latest_release_url = "https://downloads.wordpress.org/plugin/" . $wporg_slug . ".zip";
+}
+
 
     // Handle file upload for featured image
     $featured_image_id = null;
@@ -227,31 +235,34 @@ function handle_plugin_repo_submission() {
     ]);
 
     if ($post_id) {
-        update_post_meta($post_id, 'latest_release_url', $latest_release_url);
-        update_post_meta($post_id, 'hosted_on_github', $hosted_on_github);
+    update_post_meta($post_id, 'latest_release_url', $latest_release_url);
+    update_post_meta($post_id, 'hosting_platform', $hosting_platform);
 
-        if ($hosted_on_github === 'yes') {
-            update_post_meta($post_id, 'github_username', $github_username);
-            update_post_meta($post_id, 'github_repo', $github_repo);
-            update_post_meta($post_id, 'support_url', $support_url);
-        } else {
-            update_post_meta($post_id, 'download_url', $download_url);
-        }
-
-        wp_set_object_terms($post_id, $categories, $taxonomy);
-        wp_set_object_terms($post_id, $tags, $tags_taxonomy);
-
-        if ($cover_image_url) {
-            update_post_meta($post_id, 'cover_image_url', $cover_image_url);
-        }
-
-        if ($featured_image_id) {
-            set_post_thumbnail($post_id, $featured_image_id);
-        }
-
-        wp_redirect(add_query_arg('submission', 'success', home_url()));
-        exit;
+    if ($hosting_platform === 'github') {
+        update_post_meta($post_id, 'github_username', $github_username);
+        update_post_meta($post_id, 'github_repo', $github_repo);
+        update_post_meta($post_id, 'support_url', $support_url);
+    } elseif ($hosting_platform === 'wordpress') {
+        update_post_meta($post_id, 'wporg_slug', $wporg_slug); // <--- Add it here
     } else {
+        update_post_meta($post_id, 'download_url', $download_url);
+    }
+
+    wp_set_object_terms($post_id, $categories, $taxonomy);
+    wp_set_object_terms($post_id, $tags, $tags_taxonomy);
+
+    if ($cover_image_url) {
+        update_post_meta($post_id, 'cover_image_url', $cover_image_url);
+    }
+
+    if ($featured_image_id) {
+        set_post_thumbnail($post_id, $featured_image_id);
+    }
+
+    wp_redirect(add_query_arg('submission', 'success', home_url()));
+    exit;
+}
+ else {
         wp_die('Error: Unable to create the submission.');
     }
 }
@@ -295,14 +306,28 @@ function plugin_repo_submission_form_shortcode() {
                         />
                     </div>
 
-                    <!-- Hosted on GitHub? -->
+                    <!-- Hosting Platform -->
                     <div class="submission-form__field">
-                        <label for="hosted_on_github" class="submission-form__label">Hosted on GitHub?</label>
-                        <select name="hosted_on_github" id="hosted_on_github" class="submission-form__select">
-                            <option value="yes" selected>Yes</option>
-                            <option value="no">No</option>
+                        <label for="hosting_platform" class="submission-form__label">Where is your plugin hosted?</label>
+                        <select name="hosting_platform" id="hosting_platform" class="submission-form__select">
+                            <option value="github" selected>GitHub</option>
+                            <option value="wordpress">WordPress.org</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
+
+                    <!-- WordPress.org Slug -->
+                    <div id="wporg-slug-field" class="submission-form__field" style="display: none;">
+                        <label for="wporg_slug" class="submission-form__label">WordPress.org Plugin Slug</label>
+                        <input 
+                            type="text" 
+                            name="wporg_slug" 
+                            id="wporg_slug" 
+                            placeholder="e.g. contact-form-7" 
+                            class="submission-form__input"
+                        />
+                    </div>
+
 
                     <!-- GitHub Username and Repo -->
                     <div id="github-fields" class="submission-form__github">
@@ -452,29 +477,32 @@ function plugin_repo_submission_form_shortcode() {
 
     <!-- JavaScript -->
     <script>
-    // Toggle Name Label Based on Type
-    document.getElementById('type').addEventListener('change', function () {
-        const type = this.value;
-        const nameLabel = document.querySelector('label[for="name"]');
-        nameLabel.textContent = type === 'plugin_repo' ? 'Plugin Name' : 'Theme Name';
-    });
-    document.getElementById('repo_submission_form').addEventListener('submit', function(event) {
+// Toggle Name Label Based on Type
+document.getElementById('type').addEventListener('change', function () {
+    const type = this.value;
+    const nameLabel = document.querySelector('label[for="name"]');
+    nameLabel.textContent = type === 'plugin_repo' ? 'Plugin Name' : 'Theme Name';
+});
+
+// Validate markdown file extension on submit
+document.getElementById('repo_submission_form').addEventListener('submit', function(event) {
     const allowedExtensions = ['md', 'html', 'htm', 'txt'];
     const markdownFileName = document.getElementById('markdown_file_name').value.trim();
 
     if (markdownFileName) {
         const fileExtension = markdownFileName.split('.').pop().toLowerCase();
         if (!allowedExtensions.includes(fileExtension)) {
-            event.preventDefault(); // Prevent form submission
+            event.preventDefault();
             alert('Error: Unsupported file type. Please provide a Markdown (.md), HTML (.html), HTM (.htm), or text (.txt) file.');
         }
     }
 });
 
-    // Toggle Fields Based on Hosted on GitHub
-    document.addEventListener('DOMContentLoaded', function () {
-    const hostedOnGitHub = document.getElementById('hosted_on_github');
+// Toggle fields based on hosting platform selection
+document.addEventListener('DOMContentLoaded', function () {
+    const platformSelect = document.getElementById('hosting_platform');
     const githubFields = document.getElementById('github-fields');
+    const wporgSlugField = document.getElementById('wporg-slug-field');
     const downloadUrlField = document.getElementById('download-url-field');
     const githubUsernameField = document.getElementById('github_username');
     const githubRepoField = document.getElementById('github_repo');
@@ -483,55 +511,43 @@ function plugin_repo_submission_form_shortcode() {
     const markdownFileUploadField = document.getElementById('upload-markdown-field');
     const importOption = landingPageContent.querySelector('option[value="import_from_github"]');
 
-    // Toggle fields based on Hosted on GitHub
-    function toggleGitHubFields() {
-        const isHostedOnGitHub = hostedOnGitHub.value === 'yes';
+    function toggleFieldsBasedOnHosting() {
+        const platform = platformSelect.value;
 
-        // Toggle GitHub fields
-        githubFields.style.display = isHostedOnGitHub ? 'flex' : 'none';
-        githubUsernameField.required = isHostedOnGitHub;
-        githubRepoField.required = isHostedOnGitHub;
+        githubFields.style.display = platform === 'github' ? 'flex' : 'none';
+        wporgSlugField.style.display = platform === 'wordpress' ? 'block' : 'none';
+        downloadUrlField.style.display = platform === 'other' ? 'block' : 'none';
 
-        // Toggle Download URL field
-        downloadUrlField.style.display = isHostedOnGitHub ? 'none' : 'block';
-        document.getElementById('download_url').required = !isHostedOnGitHub;
+        githubUsernameField.required = platform === 'github';
+        githubRepoField.required = platform === 'github';
+        document.getElementById('download_url').required = platform === 'other';
 
-        // Show or hide the "import_from_github" option
-        importOption.style.display = isHostedOnGitHub ? 'block' : 'none';
-        if (!isHostedOnGitHub && landingPageContent.value === 'import_from_github') {
-            landingPageContent.value = 'upload_markdown';
+        // Adjust landing page content options
+        if (platform === 'github') {
+            importOption.style.display = 'block';
+        } else {
+            importOption.style.display = 'none';
+            if (landingPageContent.value === 'import_from_github') {
+                landingPageContent.value = 'upload_markdown';
+            }
         }
+
+        toggleMarkdownFields(); // Always call to ensure consistency
     }
 
-    // Toggle fields based on Landing Page Content
     function toggleMarkdownFields() {
         const selectedValue = landingPageContent.value;
-
-        // Show or hide fields based on the selected value
         markdownFileNameField.style.display = selectedValue === 'import_from_github' ? 'block' : 'none';
         markdownFileUploadField.style.display = selectedValue === 'upload_markdown' ? 'block' : 'none';
     }
 
-    // Initialize fields on page load
-    function initializeFields() {
-        toggleGitHubFields();
-        toggleMarkdownFields();
-    }
-
-    // Add event listeners
-    hostedOnGitHub.addEventListener('change', () => {
-        toggleGitHubFields();
-        toggleMarkdownFields();
-    });
-
+    platformSelect.addEventListener('change', toggleFieldsBasedOnHosting);
     landingPageContent.addEventListener('change', toggleMarkdownFields);
 
-    // Run initialization
-    initializeFields();
+    toggleFieldsBasedOnHosting(); // Initialize
 });
-
-
 </script>
+
 
 
     <?php
