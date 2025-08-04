@@ -3,6 +3,7 @@ namespace TheRepo\Shortcode;
 use function TheRepo\Functions\fetch_github_data;
 
 function previous_releases() {
+    error_log("bro");
     $GLOBALS['the_repo_should_enqueue_assets'] = true;
 
 
@@ -31,7 +32,7 @@ function previous_releases() {
     ob_start();
     ?>
     <div class="previous-releases">
-        <h3>Previous Versions</h3>
+        
         <ul class="space-y-2 !list-none !m-0">
             <?php
             // Skip the first release (the latest one already handled by the magic button)

@@ -2,8 +2,96 @@
 
 namespace TheRepo\Functions;
 
+// AJAX actions for get_release_data
 add_action('wp_ajax_get_release_data', __NAMESPACE__ . '\\ajax_get_release_data');
 add_action('wp_ajax_nopriv_get_release_data', __NAMESPACE__ . '\\ajax_get_release_data');
+
+// Allow SVG uploads
+add_filter('wp_check_filetype_and_ext', __NAMESPACE__ . '\\allow_svg_filetype', 10, 4);
+
+function allow_svg_filetype($data, $file, $filename, $mimes) {
+    $filetype = wp_check_filetype($filename, $mimes);
+
+    return [
+        'ext'             => $filetype['ext'],
+        'type'            => $filetype['type'],
+        'proper_filename' => $data['proper_filename']
+    ];
+}
+
+add_filter('upload_mimes', __NAMESPACE__ . '\\cc_mime_types');
+
+function cc_mime_types($mimes) {
+    $mimes['svg'] = 'image/svg+xml';
+    $mimes['jpg|jpeg|jpe'] = 'image/jpeg';
+    $mimes['gif'] = 'image/gif';
+    $mimes['webp'] = 'image/webp';
+    // Debug: Log MIME types
+    
+    return $mimes;
+}
+
+add_action('admin_head', __NAMESPACE__ . '\\fix_svg');
+
+function fix_svg() {
+    echo '<style type="text/css">
+        .attachment-266x266, .thumbnail img, .wp-post-image {
+            width: 100% !important;
+            height: auto !important;
+            object-fit: contain;
+        }
+        img[src$=".svg"], img[src$=".jpg"], img[src$=".jpeg"], img[src$=".gif"], img[src$=".webp"] {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>';
+}
+
+add_filter('upload_mimes', __NAMESPACE__ . '\\restrict_subscriber_mimes');
+
+function restrict_subscriber_mimes($mimes) {
+    if (current_user_can('subscriber')) {
+        $restricted_mimes = [
+            'jpg|jpeg|jpe' => 'image/jpeg',
+            'png'          => 'image/png',
+            'gif'          => 'image/gif',
+            'svg'          => 'image/svg+xml',
+            'webp'         => 'image/webp',
+        ];
+        // Debug: Log restricted MIME types
+        error_log('restrict_subscriber_mimes: Restricted Mimes=' . print_r($restricted_mimes, true));
+        return $restricted_mimes;
+    }
+    return $mimes;
+}
+
+add_filter('ajax_query_attachments_args', __NAMESPACE__ . '\\restrict_subscriber_attachments');
+
+function restrict_subscriber_attachments($query) {
+    if (current_user_can('subscriber')) {
+        $query['author'] = get_current_user_id();
+    }
+    return $query;
+}
+
+add_action('admin_init', __NAMESPACE__ . '\\restrict_subscriber_admin_access');
+
+function restrict_subscriber_admin_access() {
+    if (defined('DOING_AJAX') && DOING_AJAX) {
+        return;
+    }
+
+    $user = wp_get_current_user();
+
+    if (in_array('subscriber', (array) $user->roles)) {
+        if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'post.php') !== false) {
+            return;
+        }
+
+        wp_redirect(home_url());
+        exit;
+    }
+}
 
 function ajax_get_release_data() {
     $url = isset($_GET['url']) ? esc_url_raw($_GET['url']) : '';
@@ -19,18 +107,16 @@ function ajax_get_release_data() {
         wp_send_json_error(['message' => 'Invalid release data']);
     }
 
-    // First: check for manually uploaded assets (with the cube icon)
     if (!empty($data['assets'][0]['browser_download_url'])) {
         wp_send_json_success([
             'download_url' => $data['assets'][0]['browser_download_url'],
         ]);
     }
 
-    // Fallback: construct the URL for auto-generated source code ZIP
     if (isset($data['html_url'])) {
         preg_match('#github\.com/([^/]+/[^/]+)/#', $data['html_url'], $matches);
         if (!empty($matches[1])) {
-            $repo = $matches[1]; // e.g., user/repo
+            $repo = $matches[1];
             $tag = $data['tag_name'];
             $source_zip_url = "https://github.com/{$repo}/archive/refs/tags/{$tag}.zip";
 
@@ -43,8 +129,6 @@ function ajax_get_release_data() {
     wp_send_json_error(['message' => 'No downloadable assets or source zip found.']);
 }
 
-
-
 function allow_subscribers_to_edit_own_posts() {
     $subscriber_role = get_role('subscriber');
     if ($subscriber_role) {
@@ -55,7 +139,6 @@ function allow_subscribers_to_edit_own_posts() {
     }
 }
 add_action('init', __NAMESPACE__ . '\\allow_subscribers_to_edit_own_posts');
-
 
 function restrict_subscriber_posts($query) {
     if (!is_admin()) {
@@ -75,50 +158,12 @@ add_action('pre_get_posts', __NAMESPACE__ . '\\restrict_subscriber_posts');
 function restrict_subscriber_capabilities() {
     $subscriber_role = get_role('subscriber');
     if ($subscriber_role) {
-        // $subscriber_role->remove_cap('publish_posts');
         $subscriber_role->remove_cap('delete_posts');
     }
 }
 add_action('init', __NAMESPACE__ . '\\restrict_subscriber_capabilities');
 
-add_filter('upload_mimes', function ($mimes) {
-    if (current_user_can('subscriber')) {
-        return [
-            'jpg|jpeg|jpe' => 'image/jpeg',
-            'png'          => 'image/png',
-            'gif'          => 'image/gif',
-        ];
-    }
-    return $mimes;
-});
-
-add_filter('ajax_query_attachments_args', function ($query) {
-    if (current_user_can('subscriber')) {
-        $query['author'] = get_current_user_id();
-    }
-    return $query;
-});
-
-add_action('admin_init', function () {
-    if (defined('DOING_AJAX') && DOING_AJAX) {
-        return;
-    }
-
-    $user = wp_get_current_user();
-
-    if (in_array('subscriber', (array) $user->roles)) {
-        if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'post.php') !== false) {
-            return;
-        }
-
-        wp_redirect(home_url());
-        exit;
-    }
-});
-
 function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
-    // error_log("fetching data");
-    delete_transient($cache_key);
     $cached_data = get_transient($cache_key);
 
     if ($cached_data !== false) {
@@ -130,14 +175,11 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
         'User-Agent' => 'WordPress GitHub Fetcher',
     ];
 
-    // Add token if defined in wp-config.php
     if (defined('GITHUB_API_TOKEN') && GITHUB_API_TOKEN) {
         $headers['Authorization'] = 'token ' . GITHUB_API_TOKEN;
-        // error_log('✅ GitHub token detected and being used.');
     } else {
-        error_log('❌ GitHub token not found or empty!');
+        error_log('GitHub API: No token provided');
     }
-    
 
     $response = wp_remote_get($url, [
         'headers' => $headers,
@@ -157,130 +199,16 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     return $data;
 }
 
+add_action( 'login_form_register', 'custom_redirect_register' );
 
-function display_latest_version($atts) {
-    $post_id = get_the_ID();
-    $github_url = get_post_meta($post_id, 'latest_release_url', true);
-
-    if (empty($github_url) || !filter_var($github_url, FILTER_VALIDATE_URL)) {
-        return 'Invalid or missing GitHub URL.';
-    }
-
-    $cache_key = 'latest_version_' . md5($github_url);
-    $data = fetch_github_data($github_url, $cache_key);
-
-    if (isset($data['tag_name'])) {
-        $version = esc_html($data['tag_name']);
-        $recent_icon = '';
-
-        if (isset($data['published_at'])) {
-            $published_time = strtotime($data['published_at']);
-            $days_ago = floor((time() - $published_time) / DAY_IN_SECONDS);
-
-            if ($days_ago <= 7) {
-                $tooltip = "Updated {$days_ago} day" . ($days_ago !== 1 ? 's' : '') . " ago!";
-                $recent_icon = ' <span title="' . esc_attr($tooltip) . '" style="cursor: help;"><sup>✨</sup></span>';
-            }
-        }
-
-        return "<p>{$version}{$recent_icon}</p>";
-    }
-
-    return 'Version information could not be retrieved.';
-}
-add_shortcode('latest_version', __NAMESPACE__ . '\\display_latest_version');
-
-
-
-function fetch_latest_release_date($atts) {
-    $post_id = get_the_ID();
-    $github_url = get_post_meta($post_id, 'latest_release_url', true);
-
-    if (empty($github_url)) {
-        return '<p>No GitHub URL provided.</p>';
-    }
-
-    $cache_key = 'latest_release_date_' . md5($github_url);
-    $data = fetch_github_data($github_url, $cache_key);
-
-    if (isset($data['created_at'])) {
-        $release_date = date('F j, Y', strtotime($data['created_at']));
-        return '<p>' . esc_html($release_date) . '</p>';
-    }
-
-    return '<p>Release date information not available.</p>';
-}
-add_shortcode('latest_release_date', __NAMESPACE__ . '\\fetch_latest_release_date');
-
-function fetch_latest_release_download_count($atts) {
-    $post_id = get_the_ID();
-
-    // Retrieve owner and repo directly from meta
-    $github_owner = get_post_meta($post_id, 'github_username', true);
-    $github_repo = get_post_meta($post_id, 'github_repo', true);
-
-    if (empty($github_owner) || empty($github_repo)) {
-        error_log('GitHub owner or repo is missing.');
-        return '<p>No GitHub owner or repository provided.</p>';
-    }
-
-    
-    // Construct API URL
-    $api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}/releases";
-   
-
-    // Fetch data
-    $cache_key = 'all_releases_downloads_' . md5($api_url);
-    $data = fetch_github_data($api_url, $cache_key);
-
-    if (is_array($data)) {
-        $total_downloads = 0;
-
-        foreach ($data as $release) {
-            if (isset($release['assets']) && is_array($release['assets'])) {
-                $release_downloads = array_reduce($release['assets'], function ($carry, $item) {
-                    return $carry + ($item['download_count'] ?? 0);
-                }, 0);
-
-                $total_downloads += $release_downloads;
-            }
-        }
-
-        return '<p>' . esc_html(number_format($total_downloads)) . '</p>';
-    }
-
-    return '<p>No download information available.</p>';
+function custom_redirect_register() {
+    wp_redirect( home_url( '/register' ) );
+    exit;
 }
 
-add_shortcode('number_of_downloads', __NAMESPACE__ . '\\fetch_latest_release_download_count');
+add_filter( 'register_users', '__return_false' );
 
-function github_star_count_shortcode($atts) {
-    $post_id = get_the_ID();
 
-    $github_owner = get_post_meta($post_id, 'github_username', true);
-    $github_repo  = get_post_meta($post_id, 'github_repo', true);
-
-    if (empty($github_owner) || empty($github_repo)) {
-        return '<p>Missing GitHub owner or repo name.</p>';
-    }
-
-    $api_url = "https://api.github.com/repos/{$github_owner}/{$github_repo}";
-    $cache_key = 'github_repo_meta_' . md5($api_url);
-    $data = \TheRepo\Functions\fetch_github_data($api_url, $cache_key);
-
-    if (isset($data['stargazers_count'])) {
-        $stars = number_format($data['stargazers_count']);
-        $star_link = "https://github.com/{$github_owner}/{$github_repo}";
-
-        return '<div class="github-star-widget">
-                    <p><strong>' . esc_html($stars) . '</strong> ⭐</p>
-                    <a href="' . esc_url($star_link) . '" target="_blank" rel="noopener" class="github-star-button">Star on GitHub</a>
-                </div>';
-    }
-
-    return '<p>Unable to fetch star count.</p>';
-}
-add_shortcode('github_star_count', __NAMESPACE__ . '\\github_star_count_shortcode');
 
 
 
