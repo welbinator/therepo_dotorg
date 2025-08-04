@@ -3,6 +3,7 @@ namespace TheRepo\Shortcode;
 use function TheRepo\Functions\fetch_github_data;
 
 function previous_releases() {
+    error_log("bro");
     $GLOBALS['the_repo_should_enqueue_assets'] = true;
 
 

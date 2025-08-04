@@ -12,9 +12,6 @@ add_filter('wp_check_filetype_and_ext', __NAMESPACE__ . '\\allow_svg_filetype', 
 function allow_svg_filetype($data, $file, $filename, $mimes) {
     $filetype = wp_check_filetype($filename, $mimes);
 
-    // Debug: Log MIME types and filetype result
-    error_log('allow_svg_filetype: Filename=' . $filename . ', Filetype=' . print_r($filetype, true));
-
     return [
         'ext'             => $filetype['ext'],
         'type'            => $filetype['type'],
@@ -202,7 +199,14 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     return $data;
 }
 
+add_action( 'login_form_register', 'custom_redirect_register' );
 
+function custom_redirect_register() {
+    wp_redirect( home_url( '/register' ) );
+    exit;
+}
+
+add_filter( 'register_users', '__return_false' );
 
 
 

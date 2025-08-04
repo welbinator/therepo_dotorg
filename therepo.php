@@ -33,6 +33,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/github-latest-vers
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-latest-version.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-release-date.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-active-installs.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-previous-releases.php';
 require_once plugin_dir_path(__FILE__) . 'functions.php';
 require_once plugin_dir_path(__FILE__) . 'includes/api/public-api.php';
 

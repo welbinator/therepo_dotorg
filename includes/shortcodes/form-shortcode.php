@@ -251,6 +251,7 @@ function handle_plugin_repo_submission()
                     'slug'   => $wporg_slug,
                     'fields' => [
                         'icons' => true,
+                        'tags' => true,
                         'description' => false,
                         'sections' => false,
                     ],
@@ -260,86 +261,108 @@ function handle_plugin_repo_submission()
 
                 if (is_wp_error($api_response)) {
                     error_log('Plugin Info API Error: ' . $api_response->get_error_message());
-                } elseif (!empty($api_response->icons) && is_array($api_response->icons)) {
-                    // Prefer SVG, then 2x, then 1x, then default
-                    $icon_url = !empty($api_response->icons['svg']) ? $api_response->icons['svg'] : 
-                                (!empty($api_response->icons['2x']) ? $api_response->icons['2x'] : 
-                                (!empty($api_response->icons['1x']) ? $api_response->icons['1x'] : 
-                                (!empty($api_response->icons['default']) ? $api_response->icons['default'] : '')));
+                } else {
+                    // Handle plugin icon
+                    if (!empty($api_response->icons) && is_array($api_response->icons)) {
+                        // Prefer SVG, then 2x, then 1x, then default
+                        $icon_url = !empty($api_response->icons['svg']) ? $api_response->icons['svg'] : 
+                                    (!empty($api_response->icons['2x']) ? $api_response->icons['2x'] : 
+                                    (!empty($api_response->icons['1x']) ? $api_response->icons['1x'] : 
+                                    (!empty($api_response->icons['default']) ? $api_response->icons['default'] : '')));
 
-                    if ($icon_url) {
-                        update_post_meta($post_id, 'wporg_plugin_icon', esc_url_raw($icon_url));
+                        if ($icon_url) {
+                            update_post_meta($post_id, 'wporg_plugin_icon', esc_url_raw($icon_url));
 
-                       
+                            // Download the icon
+                            $tmp = download_url($icon_url);
 
-                        // Download the icon
-                        $tmp = download_url($icon_url);
+                            if (!is_wp_error($tmp)) {
+                                // Strip query string from filename
+                                $parsed_url = parse_url($icon_url, PHP_URL_PATH);
+                                $filename = basename($parsed_url);
+                                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-                        if (!is_wp_error($tmp)) {
-                            // Strip query string from filename
-                            $parsed_url = parse_url($icon_url, PHP_URL_PATH);
-                            $filename = basename($parsed_url);
-                            $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-                            // Use the original filename for valid extensions
-                            if (!in_array($extension, ['png', 'svg', 'jpg', 'jpeg'], true)) {
-                                error_log('Invalid icon extension: ' . $extension . '. Falling back to plugin slug with appropriate extension for URL: ' . $icon_url);
-                                $filename = $wporg_slug . ($api_response->icons['svg'] ? '.svg' : '.png');
-                                $extension = $api_response->icons['svg'] ? 'svg' : 'png';
-                            }
-
-                            // Ensure the temporary file has the correct extension
-                            $tmp_base = preg_replace('/\.\w+$/', '', $tmp); // Strip any existing extension
-                            $tmp_with_ext = $tmp_base . '.' . $extension;
-                            if (!rename($tmp, $tmp_with_ext)) {
-                                error_log('Error renaming temporary file to: ' . $tmp_with_ext);
-                                unlink($tmp);
-                            } else {
-                                $tmp = $tmp_with_ext;
-
-                                $file_array = [
-                                    'name' => sanitize_file_name($filename),
-                                    'tmp_name' => $tmp,
-                                    'type' => $extension === 'svg' ? 'image/svg+xml' : 'image/png',
-                                ];
-
-                                // Debug: Log file array and temporary file content
-                                error_log('File Array: ' . print_r($file_array, true));
-                                $file_content = file_get_contents($tmp);
-                                error_log('Temporary File Content (first 100 chars): ' . substr($file_content, 0, 100));
-
-                                // Explicitly define allowed MIME types
-                                $allowed_mime_types = array_merge(wp_get_mime_types(), ['svg' => 'image/svg+xml']);
-
-                                // Check file type with explicit MIME types
-                                $filetype = wp_check_filetype($file_array['name'], $allowed_mime_types);
-                                if (empty($filetype['ext']) || empty($filetype['type'])) {
-                                    // Fallback: Manually set filetype for SVG
-                                    if ($extension === 'svg') {
-                                        $filetype = ['ext' => 'svg', 'type' => 'image/svg+xml'];
-                                        error_log('Fallback: Manually set filetype for SVG: ' . print_r($filetype, true));
-                                    }
+                                // Use the original filename for valid extensions
+                                if (!in_array($extension, ['png', 'svg', 'jpg', 'jpeg'], true)) {
+                                    error_log('Invalid icon extension: ' . $extension . '. Falling back to plugin slug with appropriate extension for URL: ' . $icon_url);
+                                    $filename = $wporg_slug . ($api_response->icons['svg'] ? '.svg' : '.png');
+                                    $extension = $api_response->icons['svg'] ? 'svg' : 'png';
                                 }
 
-                                error_log('File Details: Name=' . $file_array['name'] . ', Temp Path=' . $tmp . ', MIME=' . $filetype['type'] . ', Extension=' . $filetype['ext']);
+                                // Ensure the temporary file has the correct extension
+                                $tmp_base = preg_replace('/\.\w+$/', '', $tmp); // Strip any existing extension
+                                $tmp_with_ext = $tmp_base . '.' . $extension;
+                                if (!rename($tmp, $tmp_with_ext)) {
+                                    error_log('Error renaming temporary file to: ' . $tmp_with_ext);
+                                    unlink($tmp);
+                                } else {
+                                    $tmp = $tmp_with_ext;
 
-                                // Validate file type
-                                if (
+                                    $file_array = [
+                                        'name' => sanitize_file_name($filename),
+                                        'tmp_name' => $tmp,
+                                        'type' => $extension === 'svg' ? 'image/svg+xml' : 'image/png',
+                                    ];
+
+                                    // Debug: Log file array and temporary file content
+                                    error_log('File Array: ' . print_r($file_array, true));
+                                    $file_content = file_get_contents($tmp);
+                                    error_log('Temporary File Content (first 100 chars): ' . substr($file_content, 0, 100));
+
+                                    // Explicitly define allowed MIME types
+                                    $allowed_mime_types = array_merge(wp_get_mime_types(), ['svg' => 'image/svg+xml']);
+
+                                    // Check file type with explicit MIME types
+                                    $filetype = wp_check_filetype($file_array['name'], $allowed_mime_types);
+                                    if (empty($filetype['ext']) || empty($filetype['type'])) {
+                                        // Fallback: Manually set filetype for SVG
+                                        if ($extension === 'svg') {
+                                            $filetype = ['ext' => 'svg', 'type' => 'image/svg+xml'];
+                                            error_log('Fallback: Manually set filetype for SVG: ' . print_r($filetype, true));
+                                        }
+                                    }
+
+                                    error_log('File Details: Name=' . $file_array['name'] . ', Temp Path=' . $tmp . ', MIME=' . $filetype['type'] . ', Extension=' . $filetype['ext']);
+
+                                    // Validate file type
+                                    if (
                                         !isset($allowed_mime_types[$filetype['ext']]) ||
                                         !in_array($filetype['type'], ['image/png', 'image/svg+xml', 'image/jpeg'], true)
                                     ) {
+                                        error_log('File Type Validation Error: File extension or MIME type not allowed. Extension=' . $filetype['ext'] . ', MIME=' . $filetype['type']);
+                                        unlink($tmp); // Clean up temporary file
+                                    } else {
+                                        // Validate SVG content
+                                        if ($extension === 'svg') {
+                                            $file_content = file_get_contents($tmp);
+                                            if (strpos($file_content, '<svg') === false) {
+                                                error_log('Error: Downloaded file is not a valid SVG for URL: ' . $icon_url);
+                                                unlink($tmp);
+                                            } else {
+                                                // Ensure media handling functions are available
+                                                if (!function_exists('media_handle_sideload')) {
+                                                    require_once ABSPATH . 'wp-admin/includes/image.php';
+                                                    require_once ABSPATH . 'wp-admin/includes/file.php';
+                                                    require_once ABSPATH . 'wp-admin/includes/media.php';
+                                                }
 
-                                    error_log('File Type Validation Error: File extension or MIME type not allowed. Extension=' . $filetype['ext'] . ', MIME=' . $filetype['type']);
-                                    unlink($tmp); // Clean up temporary file
-                                } else {
-                                    // Validate SVG content
-                                    if ($extension === 'svg') {
-                                        $file_content = file_get_contents($tmp);
-                                        if (strpos($file_content, '<svg') === false) {
-                                            error_log('Error: Downloaded file is not a valid SVG for URL: ' . $icon_url);
-                                            unlink($tmp);
+                                                // Debug: Log allowed MIME types
+                                                error_log('Allowed MIME Types: ' . print_r($allowed_mime_types, true));
+
+                                                // Sideload the file
+                                                $attachment_id = media_handle_sideload($file_array, $post_id, sanitize_file_name($filename));
+
+                                                if (!is_wp_error($attachment_id)) {
+                                                    // Debug: Log successful attachment
+                                                    error_log('Featured Image Set Successfully: Attachment ID=' . $attachment_id);
+                                                    $featured_image_id = $attachment_id; // Set featured_image_id for later use
+                                                } else {
+                                                    error_log('Error setting featured image: ' . $attachment_id->get_error_message());
+                                                    unlink($tmp); // Clean up temporary file
+                                                }
+                                            }
                                         } else {
-                                            // Ensure media handling functions are available
+                                            // For PNG files
                                             if (!function_exists('media_handle_sideload')) {
                                                 require_once ABSPATH . 'wp-admin/includes/image.php';
                                                 require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -361,39 +384,53 @@ function handle_plugin_repo_submission()
                                                 unlink($tmp); // Clean up temporary file
                                             }
                                         }
-                                    } else {
-                                        // For PNG files
-                                        if (!function_exists('media_handle_sideload')) {
-                                            require_once ABSPATH . 'wp-admin/includes/image.php';
-                                            require_once ABSPATH . 'wp-admin/includes/file.php';
-                                            require_once ABSPATH . 'wp-admin/includes/media.php';
-                                        }
-
-                                        // Debug: Log allowed MIME types
-                                        error_log('Allowed MIME Types: ' . print_r($allowed_mime_types, true));
-
-                                        // Sideload the file
-                                        $attachment_id = media_handle_sideload($file_array, $post_id, sanitize_file_name($filename));
-
-                                        if (!is_wp_error($attachment_id)) {
-                                            // Debug: Log successful attachment
-                                            error_log('Featured Image Set Successfully: Attachment ID=' . $attachment_id);
-                                            $featured_image_id = $attachment_id; // Set featured_image_id for later use
-                                        } else {
-                                            error_log('Error setting featured image: ' . $attachment_id->get_error_message());
-                                            unlink($tmp); // Clean up temporary file
-                                        }
                                     }
                                 }
+                            } else {
+                                error_log('Error downloading image: ' . $tmp->get_error_message());
                             }
-                        } else {
-                            error_log('Error downloading image: ' . $tmp->get_error_message());
                         }
                     } else {
                         error_log('Plugin Info API Error: No valid icon URL found for slug ' . $wporg_slug);
                     }
-                } else {
-                    error_log('Plugin Info API Error: No icons found or invalid response for slug ' . $wporg_slug);
+
+                    // Handle WordPress.org tags
+                    if (!empty($api_response->tags) && is_array($api_response->tags)) {
+                        // Log the raw tags for debugging
+                        error_log('WordPress.org Tags for slug ' . $wporg_slug . ': ' . print_r($api_response->tags, true));
+                        // Extract tag slugs or names
+                        $wporg_tags = array_map('sanitize_title', array_keys($api_response->tags));
+                        // Ensure terms exist in the plugin-tag taxonomy
+                        $term_ids = [];
+                        foreach ($wporg_tags as $tag) {
+                            if (!empty($tag)) {
+                                $term = term_exists($tag, 'plugin-tag');
+                                if (!$term) {
+                                    $term = wp_insert_term($tag, 'plugin-tag');
+                                    if (is_wp_error($term)) {
+                                        error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
+                                        continue;
+                                    }
+                                    $term_ids[] = (int) $term['term_id'];
+                                } else {
+                                    $term_ids[] = (int) $term['term_id'];
+                                }
+                            }
+                        }
+                        // Combine with user-submitted tags
+                        $combined_tags = array_unique(array_merge($tags, $wporg_tags));
+                        // Log the combined tags for debugging
+                        error_log('Combined Tags for post ' . $post_id . ': ' . print_r($combined_tags, true));
+                        // Set terms, appending to existing ones
+                        $result = wp_set_object_terms($post_id, $combined_tags, 'plugin-tag', true);
+                        if (is_wp_error($result)) {
+                            error_log('Error setting plugin-tag terms: ' . $result->get_error_message());
+                        } else {
+                            error_log('Successfully set plugin-tag terms for post ' . $post_id);
+                        }
+                    } else {
+                        error_log('Plugin Info API Error: No tags found for slug ' . $wporg_slug);
+                    }
                 }
             }
         } else {
@@ -401,7 +438,7 @@ function handle_plugin_repo_submission()
         }
 
         wp_set_object_terms($post_id, $categories, $taxonomy);
-        wp_set_object_terms($post_id, $tags, $tags_taxonomy);
+        // Removed redundant wp_set_object_terms for tags since it's handled above
 
         if ($cover_image_url) {
             update_post_meta($post_id, 'cover_image_url', $cover_image_url);
@@ -421,7 +458,7 @@ function handle_plugin_repo_submission()
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 
-// Form shortcode
+// Form shortcode (unchanged, included for completeness)
 function plugin_repo_submission_form_shortcode()
 {
     // Debug: Log shortcode execution

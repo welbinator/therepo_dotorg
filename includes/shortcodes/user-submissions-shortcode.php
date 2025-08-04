@@ -11,9 +11,9 @@ function user_submissions_shortcode() {
 
     ob_start();
     ?>
-    <section class="!py-16">
-        <div class="!container !mx-auto !px-4">
-            <div id="account-page-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <!-- <section class="plugin-list">
+        <div class="plugin-list__container"> -->
+            <div id="account-page-grid" class="plugin-list__grid">
                 <?php
                 $query = new \WP_Query([
                     'post_type' => ['plugin_repo', 'theme_repo'],
@@ -30,26 +30,26 @@ function user_submissions_shortcode() {
                         $featured_image = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail') ?: 'https://via.placeholder.com/60';
                         $edit_link = get_edit_post_link(get_the_ID());
                         ?>
-                        <div class="!bg-white !rounded-lg !shadow-md !overflow-hidden">
-                            <div class="!p-6">
-                                <div class="!flex gap-4 !items-start space-x-4 !mb-4">
-                                    <a href="<?php the_permalink(); ?>" class="!rounded-md !block">
-                                        <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="!rounded-md !object-cover">
+                        <div class="plugin-list__card">
+                            <div class="plugin-list__card-content">
+                                <div class="plugin-list__card-header">
+                                    <a href="<?php the_permalink(); ?>" class="plugin-list__card-image-link">
+                                        <img src="<?php echo esc_url($featured_image); ?>" alt="<?php the_title_attribute(); ?>" width="60" height="60" class="plugin-list__card-image">
                                     </a>
-                                    <div class="!flex-grow">
-                                        <div class="!flex !justify-between !items-start">
-                                            <a href="<?php the_permalink(); ?>" class="!text-xl !font-semibold !text-blue-500 hover:!underline">
+                                    <div class="plugin-list__card-info">
+                                        <div class="plugin-list__card-title-wrapper">
+                                            <a href="<?php the_permalink(); ?>" class="plugin-list__card-title">
                                                 <?php the_title(); ?>
                                             </a>
-                                            <span class="!px-2 !py-1 !text-xs !font-semibold !rounded !whitespace-nowrap <?php echo $post_type === 'Plugin' ? '!bg-blue-100 !text-blue-800' : '!bg-green-100 !text-green-800'; ?>">
+                                            <span class="plugin-list__card-badge">
                                                 <?php echo esc_html($post_type); ?>
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="!flex flex-wrap !justify-end !items-center github-download-button">
+                                <div class="plugin-list__card-footer">
                                     
-                                    <a href="<?php echo esc_url($edit_link); ?>" class="!bg-yellow-500 !hover:bg-yellow-600 !text-white !px-4 !py-2 !rounded-full !text-sm !transition !duration-300 !whitespace-nowrap">
+                                    <a href="<?php echo esc_url($edit_link); ?>" class="plugin-list__card-button">
                                         Edit
                                     </a>
                                 </div>
@@ -64,8 +64,8 @@ function user_submissions_shortcode() {
                 wp_reset_postdata();
                 ?>
             </div>
-        </div>
-    </section>
+        <!-- </div>
+    </section> -->
     <?php
     return ob_get_clean();
 }
