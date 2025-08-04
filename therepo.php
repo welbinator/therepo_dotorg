@@ -26,6 +26,13 @@ require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/form-shortcode.php
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/share-buttons.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/user-submissions-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/previous-releases.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/github-stars.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/github-downloads.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/github-release-date.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/github-latest-version.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-latest-version.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-release-date.php';
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/wp-active-installs.php';
 require_once plugin_dir_path(__FILE__) . 'functions.php';
 require_once plugin_dir_path(__FILE__) . 'includes/api/public-api.php';
 

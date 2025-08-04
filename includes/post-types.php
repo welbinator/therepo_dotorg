@@ -196,7 +196,7 @@ add_action('init', function () {
             'public' => true,
             'show_in_rest' => true,
             'menu_icon' => 'dashicons-admin-post',
-            'supports' => ['title', 'editor', 'thumbnail', 'custom-fields', 'author', 'comments'],
+            'supports' => ['title', 'editor', 'thumbnail', 'custom-fields', 'author', 'comments', 'excerpt'],
             'taxonomies' => [$post_type . '-category'],
         ]);
     }
