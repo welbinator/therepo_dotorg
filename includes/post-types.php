@@ -24,6 +24,7 @@ function render_repo_meta_box($post) {
     $free_or_pro = get_post_meta($post->ID, 'free_or_pro', true);
     $cover_image_url = get_post_meta($post->ID, 'cover_image_url', true);
     $support_url = get_post_meta($post->ID, 'support_url', true);
+    $hosting_platform = get_post_meta($post->ID, 'hosting_platform', true);
 
     if ($free_or_pro === '') {
         $free_or_pro = 'Free';
@@ -52,6 +53,14 @@ function render_repo_meta_box($post) {
         <label>
             <input type="radio" name="free_or_pro" value="Pro" <?php checked($free_or_pro, 'Pro'); ?>> Pro
         </label>
+    </p>
+    <p>
+        <label for="hosting_platform"><strong>Hosting Platform:</strong></label>
+        <select id="hosting_platform" name="hosting_platform" class="widefat">
+            <option value="github" <?php selected($hosting_platform, 'github'); ?>>GitHub</option>
+            <option value="wordpress" <?php selected($hosting_platform, 'wordpress'); ?>>WordPress.org</option>
+            <option value="other" <?php selected($hosting_platform, 'other'); ?>>Other</option>
+        </select>
     </p>
     <p>
         <label for="cover_image_url"><strong>Cover Image:</strong></label>
@@ -100,6 +109,13 @@ add_action('save_post', function ($post_id) {
         update_post_meta($post_id, 'free_or_pro', $free_or_pro);
     }
 
+     // Sanitize and save 'hosting_platform'
+    if (isset($_POST['hosting_platform'])) {
+        $allowed_platforms = ['github', 'wordpress', 'other'];
+        $hosting_platform = in_array($_POST['hosting_platform'], $allowed_platforms, true) ? $_POST['hosting_platform'] : '';
+        update_post_meta($post_id, 'hosting_platform', $hosting_platform);
+    }
+
     // Handle file upload for 'cover_image_url'
     if (!empty($_FILES['cover_image_url']['name'])) {
         $file = $_FILES['cover_image_url'];
@@ -131,7 +147,9 @@ add_action('init', function () {
         'cover_image_url' => 'URL of the cover image',
         'latest_release_url' => 'URL of the latest release',
         'support_url' => 'URL of the support page',
-        'free_or_pro' => 'Indicates if the submission is free or pro'
+        'free_or_pro' => 'Indicates if the submission is free or pro',
+        'hosting_platform' => 'Hosting platform for the plugin (github, wordpress, or other)'
+        
     ];
 
     foreach (['plugin_repo', 'theme_repo'] as $post_type) {
