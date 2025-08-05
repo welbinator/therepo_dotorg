@@ -199,7 +199,7 @@ function fetch_github_data($url, $cache_key, $expiration = DAY_IN_SECONDS) {
     return $data;
 }
 
-add_action( 'login_form_register', 'custom_redirect_register' );
+add_action( 'login_form_register', __NAMESPACE__ . '\\custom_redirect_register' );
 
 function custom_redirect_register() {
     wp_redirect( home_url( '/register' ) );
