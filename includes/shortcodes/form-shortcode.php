@@ -9,11 +9,10 @@ function handle_plugin_repo_submission()
     }
 
     if (!is_user_logged_in()) {
-        wp_die('Error: You must be logged in to submit a plugin or theme.');
+        wp_die('Error: You must be logged in to submit a plugin.');
     }
 
     // Gather input values with sanitization
-    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : '';
     $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
     $hosting_platform = isset($_POST['hosting_platform']) ? sanitize_text_field($_POST['hosting_platform']) : '';
     $wporg_slug = isset($_POST['wporg_slug']) ? sanitize_text_field($_POST['wporg_slug']) : '';
@@ -24,26 +23,21 @@ function handle_plugin_repo_submission()
     $download_url = isset($_POST['download_url']) ? esc_url_raw($_POST['download_url']) : '';
     $categories = isset($_POST['categories']) ? array_map('sanitize_text_field', (array) $_POST['categories']) : [];
     $tags = isset($_POST['tags']) ? array_map('sanitize_text_field', (array) $_POST['tags']) : [];
-    $post_content = 'Add your plugin/theme information here!';
+    $post_content = 'Add your plugin information here!';
     $short_description = isset($_POST['short_description']) ? sanitize_text_field($_POST['short_description']) : '';
     $latest_release_url = "https://downloads.wordpress.org/plugin/" . $wporg_slug . ".zip";
-    $post_type = $type === 'plugin_repo' ? 'plugin_repo' : 'theme_repo';
+    $post_type = 'plugin_repo'; // Default to plugin
 
     // General field validation
-    if (empty($type) || empty($name)) {
-        wp_die('Error: All fields are required.');
+    if (empty($name)) {
+        wp_die('Error: Plugin name is required.');
     }
 
     // Define allowed HTML tags and attributes for sanitization
     $allowed_html = [
-        'img' => [
-            'src' => [],
-            'alt' => [],
-        ],
+        'img' => ['src' => [], 'alt' => []],
         'p' => [],
-        'a' => [
-            'href' => [],
-        ],
+        'a' => ['href' => []],
         'ul' => [],
         'ol' => [],
         'li' => [],
@@ -65,7 +59,6 @@ function handle_plugin_repo_submission()
     // Handle "Import Markdown file from GitHub"
     if ($landing_page_content === 'import_from_github') {
         if (!empty($markdown_file_name)) {
-            // Restrict file extensions
             $allowed_extensions = ['md', 'html', 'htm', 'txt'];
             $file_extension = strtolower(pathinfo($markdown_file_name, PATHINFO_EXTENSION));
 
@@ -85,12 +78,10 @@ function handle_plugin_repo_submission()
             }
 
             $readme_url = "https://raw.githubusercontent.com/" . urlencode($github_username) . "/" . urlencode($github_repo) . "/" . $default_branch . "/" . urlencode($markdown_file_name);
-
             $response = wp_remote_get($readme_url, ['headers' => ['User-Agent' => 'TheRepo-Plugin']]);
 
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
                 $markdown = wp_remote_retrieve_body($response);
-
                 if (!empty($markdown)) {
                     $parsedown = new \Parsedown();
                     $post_content = $parsedown->text($markdown);
@@ -112,7 +103,6 @@ function handle_plugin_repo_submission()
     if ($landing_page_content === 'upload_markdown' && isset($_FILES['markdown_file'])) {
         if (!empty($_FILES['markdown_file']['name'])) {
             $uploaded_file = $_FILES['markdown_file'];
-
             if ($uploaded_file['error'] === UPLOAD_ERR_OK) {
                 $file_tmp_path = $uploaded_file['tmp_name'];
                 $file_name = $uploaded_file['name'];
@@ -121,7 +111,6 @@ function handle_plugin_repo_submission()
 
                 if (in_array($file_extension, $allowed_extensions, true)) {
                     $file_content = file_get_contents($file_tmp_path);
-
                     if (!empty($file_content)) {
                         if ($file_extension === 'md') {
                             $parsedown = new \Parsedown();
@@ -129,7 +118,6 @@ function handle_plugin_repo_submission()
                         } else {
                             $post_content = wp_kses($file_content, $allowed_html);
                         }
-
                         $post_content = wp_kses_post(wp_slash($post_content));
                     } else {
                         wp_die('Error: The uploaded file is empty.');
@@ -145,7 +133,7 @@ function handle_plugin_repo_submission()
         }
     }
 
-    // Handle "Not hosted on GitHub" and fallback
+    // Handle hosting platform
     if ($hosting_platform === 'other') {
         if (empty($post_content)) {
             wp_die('Error: You must upload a valid file to populate the post content.');
@@ -168,7 +156,6 @@ function handle_plugin_repo_submission()
     $featured_image_id = null;
     if (!empty($_FILES['featured_image']['name'])) {
         $upload = wp_handle_upload($_FILES['featured_image'], ['test_form' => false]);
-
         if ($upload && !isset($upload['error'])) {
             $file_path = $upload['file'];
             $file_url = $upload['url'];
@@ -182,7 +169,6 @@ function handle_plugin_repo_submission()
             ];
 
             $featured_image_id = wp_insert_attachment($attachment, $file_path);
-
             if (!is_wp_error($featured_image_id)) {
                 require_once ABSPATH . 'wp-admin/includes/image.php';
                 $attach_data = wp_generate_attachment_metadata($featured_image_id, $file_path);
@@ -205,14 +191,13 @@ function handle_plugin_repo_submission()
             wp_die('Error uploading cover image: ' . $upload['error']);
         }
     } else {
-        // Use default cover image if no image is uploaded
         $default_image_path = plugin_dir_url(dirname(dirname(__FILE__))) . 'assets/img/therepo-default-banner.jpg';
         $cover_image_url = esc_url_raw($default_image_path);
     }
 
-    // Determine post type and taxonomy
-    $taxonomy = $type === 'plugin_repo' ? 'plugin-category' : 'theme-category';
-    $tags_taxonomy = $type === 'plugin_repo' ? 'plugin-tag' : 'theme-tag';
+    // Set taxonomy for plugins
+    $taxonomy = 'plugin-category';
+    $tags_taxonomy = 'plugin-tag';
 
     // Create the post
     $post_id = wp_insert_post([
@@ -225,248 +210,258 @@ function handle_plugin_repo_submission()
     ]);
 
     if ($post_id) {
-        update_post_meta($post_id, 'latest_release_url', $latest_release_url);
-        update_post_meta($post_id, 'hosting_platform', $hosting_platform);
-        if ($cover_image_url) {
-            update_post_meta($post_id, 'cover_image_url', $cover_image_url);
-        }
+    // Update post meta
+    update_post_meta($post_id, 'latest_release_url', $latest_release_url);
+    update_post_meta($post_id, 'hosting_platform', $hosting_platform);
+    if ($cover_image_url) {
+        update_post_meta($post_id, 'cover_image_url', $cover_image_url);
+    }
 
-        if ($hosting_platform === 'github') {
-            update_post_meta($post_id, 'github_username', $github_username);
-            update_post_meta($post_id, 'github_repo', $github_repo);
-            update_post_meta($post_id, 'support_url', $support_url);
-        } elseif ($hosting_platform === 'wordpress') {
-            update_post_meta($post_id, 'wporg_slug', $wporg_slug);
+    // Handle tags based on hosting platform
+    $term_ids = [];
+    if ($hosting_platform === 'github') {
+        update_post_meta($post_id, 'github_username', $github_username);
+        update_post_meta($post_id, 'github_repo', $github_repo);
+        update_post_meta($post_id, 'support_url', $support_url);
 
-            // Validate the slug
-            if (empty($wporg_slug) || !preg_match('/^[a-z0-9-]+$/i', $wporg_slug)) {
-                error_log('Plugin Info API Error: Invalid plugin slug provided: ' . $wporg_slug);
-            } else {
-                // Use WordPress plugins_api() for reliability
-                if (!function_exists('plugins_api')) {
-                    require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+        // Process user-submitted tags for GitHub
+        if (!empty($tags)) {
+            foreach ($tags as $tag) {
+                if (!empty($tag)) {
+                    $term = term_exists($tag, 'plugin-tag');
+                    if (!$term) {
+                        $term = wp_insert_term($tag, 'plugin-tag');
+                        if (is_wp_error($term)) {
+                            error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
+                            continue;
+                        }
+                        $term_ids[] = (int) $term['term_id'];
+                    } else {
+                        $term_ids[] = (int) $term['term_id'];
+                    }
                 }
+            }
+        }
+    } elseif ($hosting_platform === 'wordpress') {
+        update_post_meta($post_id, 'wporg_slug', $wporg_slug);
 
-                $request_args = [
-                    'slug'   => $wporg_slug,
-                    'fields' => [
-                        'icons' => true,
-                        'tags' => true,
-                        'description' => false,
-                        'sections' => false,
-                    ],
-                ];
+        if (empty($wporg_slug) || !preg_match('/^[a-z0-9-]+$/i', $wporg_slug)) {
+            error_log('Plugin Info API Error: Invalid plugin slug provided: ' . $wporg_slug);
+        } else {
+            if (!function_exists('plugins_api')) {
+                require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+            }
 
-                $api_response = plugins_api('plugin_information', $request_args);
+            $request_args = [
+                'slug' => $wporg_slug,
+                'fields' => ['icons' => true, 'tags' => true, 'description' => false, 'sections' => false],
+            ];
 
-                if (is_wp_error($api_response)) {
-                    error_log('Plugin Info API Error: ' . $api_response->get_error_message());
-                } else {
-                    // Handle plugin icon
-                    if (!empty($api_response->icons) && is_array($api_response->icons)) {
-                        // Prefer SVG, then 2x, then 1x, then default
-                        $icon_url = !empty($api_response->icons['svg']) ? $api_response->icons['svg'] : 
-                                    (!empty($api_response->icons['2x']) ? $api_response->icons['2x'] : 
-                                    (!empty($api_response->icons['1x']) ? $api_response->icons['1x'] : 
-                                    (!empty($api_response->icons['default']) ? $api_response->icons['default'] : '')));
+            $api_response = plugins_api('plugin_information', $request_args);
+            if (is_wp_error($api_response)) {
+                error_log('Plugin Info API Error: ' . $api_response->get_error_message());
+            } else {
+                // Handle plugin icon
+                if (!empty($api_response->icons) && is_array($api_response->icons)) {
+                    $icon_url = !empty($api_response->icons['svg']) ? $api_response->icons['svg'] :
+                                (!empty($api_response->icons['2x']) ? $api_response->icons['2x'] :
+                                (!empty($api_response->icons['1x']) ? $api_response->icons['1x'] :
+                                (!empty($api_response->icons['default']) ? $api_response->icons['default'] : '')));
 
-                        if ($icon_url) {
-                            update_post_meta($post_id, 'wporg_plugin_icon', esc_url_raw($icon_url));
+                    if ($icon_url) {
+                        update_post_meta($post_id, 'wporg_plugin_icon', esc_url_raw($icon_url));
+                        $tmp = download_url($icon_url);
+                        if (!is_wp_error($tmp)) {
+                            $parsed_url = parse_url($icon_url, PHP_URL_PATH);
+                            $filename = basename($parsed_url);
+                            $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-                            // Download the icon
-                            $tmp = download_url($icon_url);
+                            if (!in_array($extension, ['png', 'svg', 'jpg', 'jpeg'], true)) {
+                                error_log('Invalid icon extension: ' . $extension . '. Falling back to plugin slug with appropriate extension for URL: ' . $icon_url);
+                                $filename = $wporg_slug . ($api_response->icons['svg'] ? '.svg' : '.png');
+                                $extension = $api_response->icons['svg'] ? 'svg' : 'png';
+                            }
 
-                            if (!is_wp_error($tmp)) {
-                                // Strip query string from filename
-                                $parsed_url = parse_url($icon_url, PHP_URL_PATH);
-                                $filename = basename($parsed_url);
-                                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                            $tmp_base = preg_replace('/\.\w+$/', '', $tmp);
+                            $tmp_with_ext = $tmp_base . '.' . $extension;
+                            if (!rename($tmp, $tmp_with_ext)) {
+                                error_log('Error renaming temporary file to: ' . $tmp_with_ext);
+                                unlink($tmp);
+                            } else {
+                                $tmp = $tmp_with_ext;
+                                $file_array = [
+                                    'name' => sanitize_file_name($filename),
+                                    'tmp_name' => $tmp,
+                                    'type' => $extension === 'svg' ? 'image/svg+xml' : 'image/png',
+                                ];
 
-                                // Use the original filename for valid extensions
-                                if (!in_array($extension, ['png', 'svg', 'jpg', 'jpeg'], true)) {
-                                    error_log('Invalid icon extension: ' . $extension . '. Falling back to plugin slug with appropriate extension for URL: ' . $icon_url);
-                                    $filename = $wporg_slug . ($api_response->icons['svg'] ? '.svg' : '.png');
-                                    $extension = $api_response->icons['svg'] ? 'svg' : 'png';
+                                $allowed_mime_types = array_merge(wp_get_mime_types(), ['svg' => 'image/svg+xml']);
+                                $filetype = wp_check_filetype($file_array['name'], $allowed_mime_types);
+                                if (empty($filetype['ext']) || empty($filetype['type'])) {
+                                    if ($extension === 'svg') {
+                                        $filetype = ['ext' => 'svg', 'type' => 'image/svg+xml'];
+                                        error_log('Fallback: Manually set filetype for SVG: ' . print_r($filetype, true));
+                                    }
                                 }
 
-                                // Ensure the temporary file has the correct extension
-                                $tmp_base = preg_replace('/\.\w+$/', '', $tmp); // Strip any existing extension
-                                $tmp_with_ext = $tmp_base . '.' . $extension;
-                                if (!rename($tmp, $tmp_with_ext)) {
-                                    error_log('Error renaming temporary file to: ' . $tmp_with_ext);
+                                if (
+                                    !isset($allowed_mime_types[$filetype['ext']]) ||
+                                    !in_array($filetype['type'], ['image/png', 'image/svg+xml', 'image/jpeg'], true)
+                                ) {
+                                    error_log('File Type Validation Error: File extension or MIME type not allowed. Extension=' . $filetype['ext'] . ', MIME=' . $filetype['type']);
                                     unlink($tmp);
                                 } else {
-                                    $tmp = $tmp_with_ext;
-
-                                    $file_array = [
-                                        'name' => sanitize_file_name($filename),
-                                        'tmp_name' => $tmp,
-                                        'type' => $extension === 'svg' ? 'image/svg+xml' : 'image/png',
-                                    ];
-
-                                    // Debug: Log file array and temporary file content
-                                    error_log('File Array: ' . print_r($file_array, true));
-                                    $file_content = file_get_contents($tmp);
-                                    error_log('Temporary File Content (first 100 chars): ' . substr($file_content, 0, 100));
-
-                                    // Explicitly define allowed MIME types
-                                    $allowed_mime_types = array_merge(wp_get_mime_types(), ['svg' => 'image/svg+xml']);
-
-                                    // Check file type with explicit MIME types
-                                    $filetype = wp_check_filetype($file_array['name'], $allowed_mime_types);
-                                    if (empty($filetype['ext']) || empty($filetype['type'])) {
-                                        // Fallback: Manually set filetype for SVG
-                                        if ($extension === 'svg') {
-                                            $filetype = ['ext' => 'svg', 'type' => 'image/svg+xml'];
-                                            error_log('Fallback: Manually set filetype for SVG: ' . print_r($filetype, true));
-                                        }
-                                    }
-
-                                    error_log('File Details: Name=' . $file_array['name'] . ', Temp Path=' . $tmp . ', MIME=' . $filetype['type'] . ', Extension=' . $filetype['ext']);
-
-                                    // Validate file type
-                                    if (
-                                        !isset($allowed_mime_types[$filetype['ext']]) ||
-                                        !in_array($filetype['type'], ['image/png', 'image/svg+xml', 'image/jpeg'], true)
-                                    ) {
-                                        error_log('File Type Validation Error: File extension or MIME type not allowed. Extension=' . $filetype['ext'] . ', MIME=' . $filetype['type']);
-                                        unlink($tmp); // Clean up temporary file
-                                    } else {
-                                        // Validate SVG content
-                                        if ($extension === 'svg') {
-                                            $file_content = file_get_contents($tmp);
-                                            if (strpos($file_content, '<svg') === false) {
-                                                error_log('Error: Downloaded file is not a valid SVG for URL: ' . $icon_url);
-                                                unlink($tmp);
-                                            } else {
-                                                // Ensure media handling functions are available
-                                                if (!function_exists('media_handle_sideload')) {
-                                                    require_once ABSPATH . 'wp-admin/includes/image.php';
-                                                    require_once ABSPATH . 'wp-admin/includes/file.php';
-                                                    require_once ABSPATH . 'wp-admin/includes/media.php';
-                                                }
-
-                                                // Debug: Log allowed MIME types
-                                                error_log('Allowed MIME Types: ' . print_r($allowed_mime_types, true));
-
-                                                // Sideload the file
-                                                $attachment_id = media_handle_sideload($file_array, $post_id, sanitize_file_name($filename));
-
-                                                if (!is_wp_error($attachment_id)) {
-                                                    // Debug: Log successful attachment
-                                                    error_log('Featured Image Set Successfully: Attachment ID=' . $attachment_id);
-                                                    $featured_image_id = $attachment_id; // Set featured_image_id for later use
-                                                } else {
-                                                    error_log('Error setting featured image: ' . $attachment_id->get_error_message());
-                                                    unlink($tmp); // Clean up temporary file
-                                                }
-                                            }
+                                    if ($extension === 'svg') {
+                                        $file_content = file_get_contents($tmp);
+                                        if (strpos($file_content, '<svg') === false) {
+                                            error_log('Error: Downloaded file is not a valid SVG for URL: ' . $icon_url);
+                                            unlink($tmp);
                                         } else {
-                                            // For PNG files
                                             if (!function_exists('media_handle_sideload')) {
                                                 require_once ABSPATH . 'wp-admin/includes/image.php';
                                                 require_once ABSPATH . 'wp-admin/includes/file.php';
                                                 require_once ABSPATH . 'wp-admin/includes/media.php';
                                             }
 
-                                            // Debug: Log allowed MIME types
-                                            error_log('Allowed MIME Types: ' . print_r($allowed_mime_types, true));
-
-                                            // Sideload the file
                                             $attachment_id = media_handle_sideload($file_array, $post_id, sanitize_file_name($filename));
-
                                             if (!is_wp_error($attachment_id)) {
-                                                // Debug: Log successful attachment
                                                 error_log('Featured Image Set Successfully: Attachment ID=' . $attachment_id);
-                                                $featured_image_id = $attachment_id; // Set featured_image_id for later use
+                                                $featured_image_id = $attachment_id;
                                             } else {
                                                 error_log('Error setting featured image: ' . $attachment_id->get_error_message());
-                                                unlink($tmp); // Clean up temporary file
+                                                unlink($tmp);
                                             }
+                                        }
+                                    } else {
+                                        if (!function_exists('media_handle_sideload')) {
+                                            require_once ABSPATH . 'wp-admin/includes/image.php';
+                                            require_once ABSPATH . 'wp-admin/includes/file.php';
+                                            require_once ABSPATH . 'wp-admin/includes/media.php';
+                                        }
+
+                                        $attachment_id = media_handle_sideload($file_array, $post_id, sanitize_file_name($filename));
+                                        if (!is_wp_error($attachment_id)) {
+                                            error_log('Featured Image Set Successfully: Attachment ID=' . $attachment_id);
+                                            $featured_image_id = $attachment_id;
+                                        } else {
+                                            error_log('Error setting featured image: ' . $attachment_id->get_error_message());
+                                            unlink($tmp);
                                         }
                                     }
                                 }
-                            } else {
-                                error_log('Error downloading image: ' . $tmp->get_error_message());
                             }
-                        }
-                    } else {
-                        error_log('Plugin Info API Error: No valid icon URL found for slug ' . $wporg_slug);
-                    }
-
-                    // Handle WordPress.org tags
-                    if (!empty($api_response->tags) && is_array($api_response->tags)) {
-                        // Log the raw tags for debugging
-                        error_log('WordPress.org Tags for slug ' . $wporg_slug . ': ' . print_r($api_response->tags, true));
-                        // Extract tag slugs or names
-                        $wporg_tags = array_map('sanitize_title', array_keys($api_response->tags));
-                        // Ensure terms exist in the plugin-tag taxonomy
-                        $term_ids = [];
-                        foreach ($wporg_tags as $tag) {
-                            if (!empty($tag)) {
-                                $term = term_exists($tag, 'plugin-tag');
-                                if (!$term) {
-                                    $term = wp_insert_term($tag, 'plugin-tag');
-                                    if (is_wp_error($term)) {
-                                        error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
-                                        continue;
-                                    }
-                                    $term_ids[] = (int) $term['term_id'];
-                                } else {
-                                    $term_ids[] = (int) $term['term_id'];
-                                }
-                            }
-                        }
-                        // Combine with user-submitted tags
-                        $combined_tags = array_unique(array_merge($tags, $wporg_tags));
-                        // Log the combined tags for debugging
-                        error_log('Combined Tags for post ' . $post_id . ': ' . print_r($combined_tags, true));
-                        // Set terms, appending to existing ones
-                        $result = wp_set_object_terms($post_id, $combined_tags, 'plugin-tag', true);
-                        if (is_wp_error($result)) {
-                            error_log('Error setting plugin-tag terms: ' . $result->get_error_message());
                         } else {
-                            error_log('Successfully set plugin-tag terms for post ' . $post_id);
+                            error_log('Error downloading image: ' . $tmp->get_error_message());
                         }
-                    } else {
-                        error_log('Plugin Info API Error: No tags found for slug ' . $wporg_slug);
+                    }
+                } else {
+                    error_log('Plugin Info API Error: No valid icon URL found for slug ' . $wporg_slug);
+                }
+
+                // Handle WordPress.org tags
+                if (!empty($api_response->tags) && is_array($api_response->tags)) {
+                    error_log('WordPress.org Tags for slug ' . $wporg_slug . ': ' . print_r($api_response->tags, true));
+                    $wporg_tags = array_map('sanitize_title', array_keys($api_response->tags));
+                    foreach ($wporg_tags as $tag) {
+                        if (!empty($tag)) {
+                            $term = term_exists($tag, 'plugin-tag');
+                            if (!$term) {
+                                $term = wp_insert_term($tag, 'plugin-tag');
+                                if (is_wp_error($term)) {
+                                    error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
+                                    continue;
+                                }
+                                $term_ids[] = (int) $term['term_id'];
+                            } else {
+                                $term_ids[] = (int) $term['term_id'];
+                            }
+                        }
+                    }
+                } else {
+                    error_log('Plugin Info API Error: No tags found for slug ' . $wporg_slug);
+                }
+            }
+
+            // Add user-submitted tags for WordPress.org
+            if (!empty($tags)) {
+                foreach ($tags as $tag) {
+                    if (!empty($tag)) {
+                        $term = term_exists($tag, 'plugin-tag');
+                        if (!$term) {
+                            $term = wp_insert_term($tag, 'plugin-tag');
+                            if (is_wp_error($term)) {
+                                error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
+                                continue;
+                            }
+                            $term_ids[] = (int) $term['term_id'];
+                        } else {
+                            $term_ids[] = (int) $term['term_id'];
+                        }
                     }
                 }
             }
-        } else {
-            update_post_meta($post_id, 'download_url', $download_url);
         }
-
-        wp_set_object_terms($post_id, $categories, $taxonomy);
-        // Removed redundant wp_set_object_terms for tags since it's handled above
-
-        if ($cover_image_url) {
-            update_post_meta($post_id, 'cover_image_url', $cover_image_url);
-        }
-
-        if ($featured_image_id) {
-            set_post_thumbnail($post_id, $featured_image_id);
-        }
-
-        wp_redirect(add_query_arg('submission', 'success', home_url()));
-        exit();
     } else {
-        wp_die('Error: Unable to create the submission.');
+        update_post_meta($post_id, 'download_url', $download_url);
+
+        // Process user-submitted tags for 'other' platform
+        if (!empty($tags)) {
+            foreach ($tags as $tag) {
+                if (!empty($tag)) {
+                    $term = term_exists($tag, 'plugin-tag');
+                    if (!$term) {
+                        $term = wp_insert_term($tag, 'plugin-tag');
+                        if (is_wp_error($term)) {
+                            error_log('Error creating term ' . $tag . ': ' . $term->get_error_message());
+                            continue;
+                        }
+                        $term_ids[] = (int) $term['term_id'];
+                    } else {
+                        $term_ids[] = (int) $term['term_id'];
+                    }
+                }
+            }
+        }
     }
+
+    // Set all collected tags
+    if (!empty($term_ids)) {
+        $result = wp_set_object_terms($post_id, $term_ids, 'plugin-tag', false);
+        if (is_wp_error($result)) {
+            error_log('Error setting plugin-tag terms: ' . $result->get_error_message());
+        } else {
+            error_log('Successfully set plugin-tag terms for post ' . $post_id);
+        }
+    }
+
+    // Set categories
+    wp_set_object_terms($post_id, $categories, $taxonomy);
+
+    // Set cover image and featured image
+    if ($cover_image_url) {
+        update_post_meta($post_id, 'cover_image_url', $cover_image_url);
+    }
+
+    if ($featured_image_id) {
+        set_post_thumbnail($post_id, $featured_image_id);
+    }
+
+    wp_redirect(add_query_arg('submission', 'success', home_url()));
+    exit();
+} else {
+    wp_die('Error: Unable to create the submission.');
+}
 }
 
 add_action('admin_post_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 add_action('admin_post_nopriv_plugin_repo_submission', __NAMESPACE__ . '\\handle_plugin_repo_submission');
 
-// Form shortcode (unchanged, included for completeness)
 function plugin_repo_submission_form_shortcode()
 {
-    // Debug: Log shortcode execution
     error_log('Shortcode [plugin_repo_form] executed');
-
     if (!is_user_logged_in()) {
         error_log('Shortcode: User not logged in');
-        return '<p>You must be logged in to submit a plugin or theme. <a href="/login">Log in</a> or <a href="/register">Register</a>.</p>';
+        return '<p>You must be logged in to submit a plugin. <a href="/login">Log in</a> or <a href="/register">Register</a>.</p>';
     }
 
     ob_start();
@@ -474,25 +469,17 @@ function plugin_repo_submission_form_shortcode()
     <div class="submission-form__wrapper">
         <form method="POST" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" class="submission-form__form" id="repo_submission_form">
             <input type="hidden" name="action" value="plugin_repo_submission">
+            <input type="hidden" name="type" value="plugin_repo">
             <?php wp_nonce_field('plugin_repo_submission', 'plugin_repo_nonce'); ?>
             
-            <!-- Type -->
-            <div class="submission-form__field">
-                <label for="type" class="submission-form__label">Type</label>
-                <select name="type" id="type" required class="submission-form__select">
-                    <option value="plugin_repo">Plugin</option>
-                    <option value="theme">Theme</option>
-                </select>
-            </div>
-
             <!-- Name -->
             <div class="submission-form__field">
-                <label for="name" class="submission-form__label">Plugin/Theme Name</label>
+                <label for="name" class="submission-form__label">Plugin Name</label>
                 <input 
                     type="text" 
                     name="name" 
                     id="name" 
-                    placeholder="Enter name" 
+                    placeholder="Enter plugin name" 
                     required 
                     class="submission-form__input"
                 />
@@ -593,7 +580,7 @@ function plugin_repo_submission_form_shortcode()
                     placeholder="Enter download URL" 
                     class="submission-form__input"
                 />
-                <p class="submission-form__hint">Provide the direct URL to download your plugin/theme.</p>
+                <p class="submission-form__hint">Provide the direct URL to download your plugin.</p>
             </div>
 
             <!-- Short Description -->
@@ -603,7 +590,7 @@ function plugin_repo_submission_form_shortcode()
                     name="short_description" 
                     id="short_description" 
                     rows="3" 
-                    placeholder="Write a short description of your plugin or theme"
+                    placeholder="Write a short description of your plugin"
                     class="submission-form__input"
                     required
                 ></textarea>
@@ -659,115 +646,158 @@ function plugin_repo_submission_form_shortcode()
                 type="submit" 
                 class="submission-form__submit"
             >
-                Submit Plugin/Theme
+                Submit Plugin
             </button>
         </form>
     </div>
 
     <!-- JavaScript -->
     <script>
-        // Toggle Name Label Based on Type
-        document.getElementById("type").addEventListener("change", function () {
-            const type = this.value;
-            const nameLabel = document.querySelector('label[for="name"]');
-            nameLabel.textContent = type === "plugin_repo" ? "Plugin Name" : "Theme Name";
+    // Validate markdown file extension on submit
+    document.getElementById("repo_submission_form").addEventListener("submit", function (event) {
+        const allowedExtensions = ["md", "html", "htm", "txt"];
+        const markdownFileName = document.getElementById("markdown_file_name").value.trim();
+
+        if (markdownFileName) {
+            const fileExtension = markdownFileName.split(".").pop().toLowerCase();
+            if (!allowedExtensions.includes(fileExtension)) {
+                event.preventDefault();
+                alert("Error: Unsupported file type. Please provide a Markdown (.md), HTML (.html), HTM (.htm), or text (.txt) file.");
+            }
+        }
+    });
+
+    // Toggle fields based on hosting platform selection and initialize Select2
+    document.addEventListener("DOMContentLoaded", function () {
+        const platformSelect = document.getElementById("hosting_platform");
+        const githubFields = document.getElementById("github-fields");
+        const wporgSlugField = document.getElementById("wporg-slug-field");
+        const downloadUrlField = document.getElementById("download-url-field");
+        const githubUsernameField = document.getElementById("github_username");
+        const githubRepoField = document.getElementById("github_repo");
+        const landingPageContent = document.getElementById("landing_page_content");
+        const markdownFileNameField = document.getElementById("markdown-file-name-field");
+        const markdownFileUploadField = document.getElementById("upload-markdown-field");
+        const importOption = landingPageContent.querySelector('option[value="import_from_github"]');
+        const featuredImageField = document.querySelector('label[for="featured_image"]');
+
+        if (!featuredImageField) {
+            console.error('Featured image field not found');
+            return;
+        }
+
+        const featuredImageFieldParent = featuredImageField.closest(".submission-form__field");
+
+        // Initialize Select2 for Categories and Tags
+        jQuery('#categories').select2({
+            tags: true,
+            placeholder: "Select or add categories",
+            allowClear: true,
+            ajax: {
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        action: 'get_plugin_categories'
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.map(function(item) {
+                            return { id: item.slug, text: item.name };
+                        })
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1
         });
 
-        // Validate markdown file extension on submit
-        document.getElementById("repo_submission_form").addEventListener("submit", function (event) {
-            const allowedExtensions = ["md", "html", "htm", "txt"];
-            const markdownFileName = document.getElementById("markdown_file_name").value.trim();
-
-            if (markdownFileName) {
-                const fileExtension = markdownFileName.split(".").pop().toLowerCase();
-                if (!allowedExtensions.includes(fileExtension)) {
-                    event.preventDefault();
-                    alert("Error: Unsupported file type. Please provide a Markdown (.md), HTML (.html), HTM (.htm), or text (.txt) file.");
-                }
-            }
+        jQuery('#tags').select2({
+            tags: true,
+            placeholder: "Select or add tags",
+            allowClear: true,
+            ajax: {
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term,
+                        action: 'get_plugin_tags'
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.map(function(item) {
+                            return { id: item.slug, text: item.name };
+                        })
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1
         });
 
-        // Toggle fields based on hosting platform selection
-        document.addEventListener("DOMContentLoaded", function () {
-            const platformSelect = document.getElementById("hosting_platform");
-            const githubFields = document.getElementById("github-fields");
-            const wporgSlugField = document.getElementById("wporg-slug-field");
-            const downloadUrlField = document.getElementById("download-url-field");
-            const githubUsernameField = document.getElementById("github_username");
-            const githubRepoField = document.getElementById("github_repo");
-            const landingPageContent = document.getElementById("landing_page_content");
-            const markdownFileNameField = document.getElementById("markdown-file-name-field");
-            const markdownFileUploadField = document.getElementById("upload-markdown-field");
-            const importOption = landingPageContent.querySelector('option[value="import_from_github"]');
-            const featuredImageField = document.querySelector('label[for="featured_image"]');
+        function toggleFieldsBasedOnHosting() {
+            const platform = platformSelect.value;
 
-            if (!featuredImageField) {
-                console.error('Featured image field not found');
-                return;
+            githubFields.style.display = platform === "github" ? "flex" : "none";
+            wporgSlugField.style.display = platform === "wordpress" ? "block" : "none";
+            downloadUrlField.style.display = platform === "other" ? "block" : "none";
+            const featuredImageInput = document.getElementById("featured_image");
+
+            if (platform === "wordpress") {
+                featuredImageInput.disabled = true;
+                featuredImageInput.removeAttribute("required");
+                featuredImageFieldParent.style.display = "none";
+            } else {
+                featuredImageInput.disabled = false;
+                featuredImageInput.setAttribute("required", "required");
+                featuredImageFieldParent.style.display = "block";
             }
 
-            const featuredImageFieldParent = featuredImageField.closest(".submission-form__field");
+            githubUsernameField.required = platform === "github";
+            githubRepoField.required = platform === "github";
+            document.getElementById("download_url").required = platform === "other";
 
-            function toggleFieldsBasedOnHosting() {
-                const platform = platformSelect.value;
-
-                githubFields.style.display = platform === "github" ? "flex" : "none";
-                wporgSlugField.style.display = platform === "wordpress" ? "block" : "none";
-                downloadUrlField.style.display = platform === "other" ? "block" : "none";
-                const featuredImageInput = document.getElementById("featured_image");
-
-                if (platform === "wordpress") {
-                    featuredImageInput.disabled = true;
-                    featuredImageInput.removeAttribute("required");
-                    featuredImageFieldParent.style.display = "none";
-                } else {
-                    featuredImageInput.disabled = false;
-                    featuredImageInput.setAttribute("required", "required");
-                    featuredImageFieldParent.style.display = "block";
+            if (platform === "github") {
+                importOption.style.display = "block";
+            } else {
+                importOption.style.display = "none";
+                if (landingPageContent.value === "import_from_github") {
+                    landingPageContent.value = "upload_markdown";
                 }
-
-                githubUsernameField.required = platform === "github";
-                githubRepoField.required = platform === "github";
-                document.getElementById("download_url").required = platform === "other";
-
-                // Adjust landing page content options
-                if (platform === "github") {
-                    importOption.style.display = "block";
-                } else {
-                    importOption.style.display = "none";
-                    if (landingPageContent.value === "import_from_github") {
-                        landingPageContent.value = "upload_markdown";
-                    }
-                }
-
-                toggleMarkdownFields();
             }
 
-            function toggleMarkdownFields() {
-                const selectedValue = landingPageContent.value;
-                markdownFileNameField.style.display = selectedValue === "import_from_github" ? "block" : "none";
-                markdownFileUploadField.style.display = selectedValue === "upload_markdown" ? "block" : "none";
-            }
+            toggleMarkdownFields();
+        }
 
-            platformSelect.addEventListener("change", toggleFieldsBasedOnHosting);
-            landingPageContent.addEventListener("change", toggleMarkdownFields);
+        function toggleMarkdownFields() {
+            const selectedValue = landingPageContent.value;
+            markdownFileNameField.style.display = selectedValue === "import_from_github" ? "block" : "none";
+            markdownFileUploadField.style.display = selectedValue === "upload_markdown" ? "block" : "none";
+        }
 
-            toggleFieldsBasedOnHosting(); // Initialize
-        });
-    </script>
+        platformSelect.addEventListener("change", toggleFieldsBasedOnHosting);
+        landingPageContent.addEventListener("change", toggleMarkdownFields);
+
+        toggleFieldsBasedOnHosting();
+    });
+</script>
     <?php
     $output = ob_get_clean();
-    
     return $output;
 }
 
 add_shortcode('plugin_repo_form', __NAMESPACE__ . '\\plugin_repo_submission_form_shortcode');
 
-// Display success message
-add_action('wp_footer', __NAMESPACE__ . '\\display_success_message');
-
 function display_success_message() {
     if (isset($_GET['submission']) && $_GET['submission'] === 'success') {
-        echo '<div class="notice success">Thank you! Your submission has been received and is pending approval.</div>';
+        echo '<div class="notice success">Thank you! Your plugin submission has been received and is pending approval.</div>';
     }
 }
+
+add_action('wp_footer', __NAMESPACE__ . '\\display_success_message');
