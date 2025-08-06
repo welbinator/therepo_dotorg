@@ -100,12 +100,12 @@ $should_enqueue = true;
 // Enqueue assets triggered by shortcodes that may run after wp_enqueue_scripts (e.g., via page builders)
 add_action('wp_footer', function () {
     if (!empty($GLOBALS['the_repo_should_enqueue_assets'])) {
-        wp_enqueue_style(
-            'eventswp-frontend',
-            plugin_dir_url(__FILE__)  . 'assets/css/style.css',
-            [],
-            THE_REPO_VERSION
-        );
+        // wp_enqueue_style(
+        //     'eventswp-frontend',
+        //     plugin_dir_url(__FILE__)  . 'assets/css/style.css',
+        //     [],
+        //     THE_REPO_VERSION
+        // );
 
         wp_enqueue_style(
             'the-repo-main-css',
