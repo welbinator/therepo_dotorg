@@ -2,7 +2,7 @@
 /**
  * Plugin Name: The Repo
  * Description: A plugin to manage and display plugins and themes from GitHub repositories.
- * Version: 1.3.2
+ * Version: 1.3.3
  * Author: James Welbes
  * Text Domain: the-repo-dot-org
  */
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define the plugin version as a constant.
-define('THE_REPO_VERSION', '1.3.2');
+define('THE_REPO_VERSION', '1.3.3');
 
 // Include necessary files.
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
@@ -100,12 +100,12 @@ $should_enqueue = true;
 // Enqueue assets triggered by shortcodes that may run after wp_enqueue_scripts (e.g., via page builders)
 add_action('wp_footer', function () {
     if (!empty($GLOBALS['the_repo_should_enqueue_assets'])) {
-        wp_enqueue_style(
-            'eventswp-frontend',
-            plugin_dir_url(__FILE__)  . 'assets/css/style.css',
-            [],
-            THE_REPO_VERSION
-        );
+        // wp_enqueue_style(
+        //     'eventswp-frontend',
+        //     plugin_dir_url(__FILE__)  . 'assets/css/style.css',
+        //     [],
+        //     THE_REPO_VERSION
+        // );
 
         wp_enqueue_style(
             'the-repo-main-css',

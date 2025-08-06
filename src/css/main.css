@@ -8,7 +8,7 @@ form#repo_submission_form {
 #repo_submission_form div textarea, 
 span.select2 {
     
-    width: 100%!important;
+    /* width: 100%!important; */
 }
 #repo_submission_form div.github-wrapper input {
     width: 250px;
