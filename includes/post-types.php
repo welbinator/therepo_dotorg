@@ -45,7 +45,7 @@ function render_repo_meta_box($post) {
                class="widefat">
         <small>Enter the URL for support (e.g., GitHub Issues page).</small>
     </p>
-    <p>
+    <!-- <p>
         <strong>Free or Pro:</strong><br>
         <label>
             <input type="radio" name="free_or_pro" value="Free" <?php checked($free_or_pro, 'Free'); ?>> Free
@@ -53,15 +53,15 @@ function render_repo_meta_box($post) {
         <label>
             <input type="radio" name="free_or_pro" value="Pro" <?php checked($free_or_pro, 'Pro'); ?>> Pro
         </label>
-    </p>
-    <p>
+    </p> -->
+    <!-- <p>
         <label for="hosting_platform"><strong>Hosting Platform:</strong></label>
         <select id="hosting_platform" name="hosting_platform" class="widefat">
             <option value="github" <?php selected($hosting_platform, 'github'); ?>>GitHub</option>
             <option value="wordpress" <?php selected($hosting_platform, 'wordpress'); ?>>WordPress.org</option>
             <option value="other" <?php selected($hosting_platform, 'other'); ?>>Other</option>
         </select>
-    </p>
+    </p> -->
     <p>
         <label for="cover_image_url"><strong>Cover Image:</strong></label>
         <input type="file" id="cover_image_url" name="cover_image_url" accept="image/jpeg,image/png" class="widefat">
