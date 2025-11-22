@@ -101,7 +101,8 @@ function ajax_get_release_data() {
     }
 
     $cache_key = 'latest_version_' . md5($url);
-    $data = fetch_github_data($url, $cache_key);
+    // Use shorter cache time for release data (1 hour instead of 24 hours)
+    $data = fetch_github_data($url, $cache_key, HOUR_IN_SECONDS);
 
     if (!$data || !isset($data['tag_name'])) {
         wp_send_json_error(['message' => 'Invalid release data']);

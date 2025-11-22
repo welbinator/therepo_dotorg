@@ -21,6 +21,7 @@ define('THE_REPO_VERSION', '1.3.4');
 require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'includes/post-types.php';
 require_once plugin_dir_path(__FILE__) . 'includes/ajax.php';
+require_once plugin_dir_path(__FILE__) . 'includes/settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/browse-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/form-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/shortcodes/share-buttons.php';
